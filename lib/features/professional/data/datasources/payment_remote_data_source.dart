@@ -22,9 +22,8 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
     required String customerEmail,
   }) async {
     try {
-      final pbUrl = sl<PocketBase>().baseUrl;
-      final baseIpUri = Uri.parse(pbUrl);
-      final middlewareUrl = 'http://${baseIpUri.host}:3000/snap-token';
+      final middlewareBase = sl<String>(instanceName: 'paymentMiddlewareUrl');
+      final middlewareUrl = '$middlewareBase/snap-token';
 
       print('DEBUG: Mencoba menghubungi middleware di $middlewareUrl...');
       final response = await http.post(

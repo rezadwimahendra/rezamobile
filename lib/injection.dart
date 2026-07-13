@@ -120,8 +120,13 @@ Future<void> init() async {
     clear: () async => sharedPreferences.remove('pb_auth'),
   );
 
-  final url = kIsWeb ? 'http://127.0.0.1:8090' : 'http://10.249.128.252:8090';
-  sl.registerLazySingleton(() => PocketBase(url, authStore: store));
+  final pbUrl = kIsWeb ? 'http://127.0.0.1:8090' : 'http://10.249.128.252:8090';
+  final middlewareUrl = pbUrl.contains('railway.app')
+      ? 'https://your-payment-middleware.up.railway.app'
+      : 'http://${Uri.parse(pbUrl).host}:3000';
+
+  sl.registerLazySingleton(() => PocketBase(pbUrl, authStore: store));
+  sl.registerLazySingleton<String>(() => middlewareUrl, instanceName: 'paymentMiddlewareUrl');
   sl.registerLazySingleton(() => http.Client());
   sl.registerLazySingleton(
     () => GeminiService(

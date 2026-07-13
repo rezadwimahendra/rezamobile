@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:js' as js;
 
 class PaymentWebViewPage extends StatefulWidget {
   final String paymentUrl;
@@ -107,7 +107,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
                           elevation: 0,
                         ),
                         onPressed: () {
-                          launchUrl(Uri.parse(widget.paymentUrl), mode: LaunchMode.externalApplication);
+                          js.context.callMethod('open', [widget.paymentUrl, '_blank']);
                           
                           // Tampilkan konfirmasi manual di dialog
                           showDialog(
@@ -151,7 +151,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
             )
           : Stack(
               children: [
-                WebViewWidget(controller: _controller),
+                WebViewWidget(controller: _controller!),
                 if (_isLoading)
                   const Center(
                     child: CircularProgressIndicator(color: Colors.black54),

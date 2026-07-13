@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:js' as js;
 
 class MapWebViewPage extends StatefulWidget {
   final double latitude;
@@ -107,7 +107,7 @@ class _MapWebViewPageState extends State<MapWebViewPage> {
                           elevation: 0,
                         ),
                         onPressed: () {
-                          launchUrl(Uri.parse(_url), mode: LaunchMode.externalApplication);
+                          js.context.callMethod('open', [_url, '_blank']);
                         },
                         icon: const Icon(Icons.open_in_new),
                         label: const Text(
@@ -122,7 +122,7 @@ class _MapWebViewPageState extends State<MapWebViewPage> {
             )
           : Stack(
               children: [
-                WebViewWidget(controller: _controller),
+                WebViewWidget(controller: _controller!),
                 if (_isLoading)
                   const Center(
                     child: CircularProgressIndicator(color: Color(0xFFFFB800)),
