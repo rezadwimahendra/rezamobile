@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../injection.dart';
@@ -15,7 +15,8 @@ class AiFoodPage extends StatefulWidget {
 
 class _AiFoodPageState extends State<AiFoodPage> {
   final ImagePicker _picker = ImagePicker();
-  File? _imageFile;
+  XFile? _imageXFile;
+  Uint8List? _imageBytes;
   bool _isAnalyzing = false;
   String? _detectedFood;
 
@@ -28,8 +29,10 @@ class _AiFoodPageState extends State<AiFoodPage> {
         imageQuality: 85,
       );
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _imageFile = File(pickedFile.path);
+          _imageXFile = pickedFile;
+          _imageBytes = bytes;
           _detectedFood = null; // Reset hasil sebelumnya
         });
       }
@@ -41,7 +44,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
   }
 
   Future<void> _analyzeImage() async {
-    if (_imageFile == null) return;
+    if (_imageXFile == null || _imageBytes == null) return;
 
     setState(() {
       _isAnalyzing = true;
@@ -49,8 +52,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
     });
 
     try {
-      final XFile xFile = XFile(_imageFile!.path);
-      final String? foodName = await sl<GeminiService>().identifyFood(xFile);
+      final String? foodName = await sl<GeminiService>().identifyFood(_imageXFile!);
 
       setState(() {
         _isAnalyzing = false;
@@ -117,11 +119,11 @@ class _AiFoodPageState extends State<AiFoodPage> {
                 border: Border.all(color: Colors.grey.shade200, width: 1.5),
               ),
               clipBehavior: Clip.antiAlias,
-              child: _imageFile != null
+              child: _imageBytes != null
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(_imageFile!, fit: BoxFit.cover),
+                        Image.memory(_imageBytes!, fit: BoxFit.cover),
                         if (_isAnalyzing)
                           Container(
                             color: Colors.black.withOpacity(0.5),
@@ -243,7 +245,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
               ],
             ),
           
-          if (_imageFile != null && !_isAnalyzing && _detectedFood == null) ...[
+          if (_imageBytes != null && !_isAnalyzing && _detectedFood == null) ...[
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _analyzeImage,

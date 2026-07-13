@@ -73,9 +73,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       role: event.role,
       birthDate: event.birthDate,
     );
-    result.fold(
-      (failure) => emit(state.copyWith(status: AuthStatus.error, errorMessage: failure)),
-      (user) => emit(state.copyWith(status: AuthStatus.verificationRequired, user: user)),
+    
+    await result.fold(
+      (failure) async {
+        emit(state.copyWith(status: AuthStatus.error, errorMessage: failure));
+      },
+      (user) async {
+        // Registrasi sukses! Lakukan auto-login menggunakan kredensial pendaftaran
+        final loginResult = await loginUseCase(event.email, event.password);
+        loginResult.fold(
+          (loginFailure) {
+            emit(state.copyWith(
+              status: AuthStatus.error, 
+              errorMessage: 'Registrasi berhasil, tapi gagal masuk otomatis: $loginFailure',
+            ));
+          },
+          (loggedInUser) {
+            emit(state.copyWith(
+              status: AuthStatus.authenticated, 
+              user: loggedInUser as UserModel,
+            ));
+          },
+        );
+      },
     );
   }
 

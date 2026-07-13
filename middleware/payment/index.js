@@ -37,7 +37,7 @@ app.use(bodyParser.json());
  * Ambil Server Key & Client Key dari Dashboard Midtrans Settings -> Access Keys
  */
 let snap = new midtransClient.Snap({
-    isProduction: false, // Disamakan dengan Laravel (false) agar bisa jalan
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true', // true jika di production
     serverKey: process.env.MIDTRANS_SERVER_KEY || 'Mid-server-PLACEHOLDER', // Gunakan environment variable dari .env
     clientKey: process.env.MIDTRANS_CLIENT_KEY || 'Mid-client-PLACEHOLDER'  // Gunakan environment variable dari .env
 });
@@ -94,7 +94,7 @@ app.post('/snap-token', async (req, res) => {
 
 
 // Jalankan Server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`==========================================`);
     console.log(` FitMotion Payment & Email Middleware Berjalan! `);

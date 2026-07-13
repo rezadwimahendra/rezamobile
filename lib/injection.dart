@@ -120,17 +120,24 @@ Future<void> init() async {
     clear: () async => sharedPreferences.remove('pb_auth'),
   );
 
-  final pbUrl = kIsWeb ? 'http://127.0.0.1:8090' : 'http://10.249.128.252:8090';
-  final middlewareUrl = pbUrl.contains('railway.app')
-      ? 'https://your-payment-middleware.up.railway.app'
+  // Set true untuk build ke Play Store (server Railway online)
+  // Set false untuk testing di localhost komputer Anda
+  const bool useProductionServer = true;
+
+  final pbUrl = useProductionServer
+      ? 'https://rezamobile-production.up.railway.app'
+      : (kIsWeb ? 'http://127.0.0.1:8090' : 'http://10.249.128.252:8090');
+
+  final middlewareUrl = useProductionServer
+      ? 'https://fitmotion-production.up.railway.app' // Ganti URL ini dengan domain payment Railway Anda
       : 'http://${Uri.parse(pbUrl).host}:3000';
 
   sl.registerLazySingleton(() => PocketBase(pbUrl, authStore: store));
   sl.registerLazySingleton<String>(() => middlewareUrl, instanceName: 'paymentMiddlewareUrl');
   sl.registerLazySingleton(() => http.Client());
   sl.registerLazySingleton(
-    () => GeminiService(
-      apiKey: const String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'PLACEHOLDER_GEMINI_KEY'),
-    ),
-  );
+  () => GeminiService(
+    apiKey: const String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'AIzaSy...IsiApiKeyAsliAndaDisini'),
+  ),
+);
 }

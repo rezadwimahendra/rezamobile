@@ -16,6 +16,7 @@ import 'features/home/presentation/pages/home_page.dart';
 import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/complete_profile_page.dart';
 import 'features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'features/auth/presentation/pages/splash_screen_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -123,25 +124,7 @@ class _FitMotionAppViewState extends State<FitMotionAppView> with WidgetsBinding
         '/complete-profile': (context) => const CompleteProfilePage(),
         '/admin': (context) => const AdminDashboardPage(),
       },
-      home: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state.status == AuthStatus.authenticated) {
-            // Jika data fisik belum diisi, arahkan ke CompleteProfilePage
-            final user = state.user;
-            if (user != null && user.role == 'admin') {
-              return const AdminDashboardPage();
-            }
-            if (user != null && (user.role == 'pro' || user.isTrainer || user.isGym)) {
-              return const HomePage();
-            }
-            if (user != null && (user.age == 0 || user.height == 0)) {
-              return const CompleteProfilePage();
-            }
-            return const HomePage();
-          }
-          return const WelcomePage();
-        },
-      ),
+      home: const SplashScreenPage(),
     );
   }
 }
