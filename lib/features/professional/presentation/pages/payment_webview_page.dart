@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'dart:js' as js;
+import 'package:fitness_app/utils/url_helper.dart';
 
 class PaymentWebViewPage extends StatefulWidget {
   final String paymentUrl;
@@ -107,7 +107,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
                           elevation: 0,
                         ),
                         onPressed: () {
-                          js.context.callMethod('open', [widget.paymentUrl, '_blank']);
+                          openUrl(widget.paymentUrl);
                           
                           // Tampilkan konfirmasi manual di dialog
                           showDialog(
