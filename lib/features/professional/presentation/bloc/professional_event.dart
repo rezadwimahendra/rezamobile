@@ -23,10 +23,16 @@ class ProfessionalRegistered extends ProfessionalEvent {
   final String name;
   final String description;
   final int price;
+  final int? nonMemberPrice;
   final String? specialty;
   final String? location;
   final File? avatarFile;
   final List<File>? galleryFiles;
+  final double? latitude;
+  final double? longitude;
+  final String? openTime;
+  final String? closeTime;
+  final String? openDays;
 
   const ProfessionalRegistered({
     required this.userId,
@@ -34,14 +40,20 @@ class ProfessionalRegistered extends ProfessionalEvent {
     required this.name,
     required this.description,
     required this.price,
+    this.nonMemberPrice,
     this.specialty,
     this.location,
     this.avatarFile,
     this.galleryFiles,
+    this.latitude,
+    this.longitude,
+    this.openTime,
+    this.closeTime,
+    this.openDays,
   });
 
   @override
-  List<Object?> get props => [userId, role, name, description, price, specialty, location, avatarFile, galleryFiles];
+  List<Object?> get props => [userId, role, name, description, price, nonMemberPrice, specialty, location, avatarFile, galleryFiles, latitude, longitude, openTime, closeTime, openDays];
 }
 
 class ProfessionalSubscribed extends ProfessionalEvent {

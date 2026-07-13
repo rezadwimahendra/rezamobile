@@ -15,6 +15,6 @@ void main() async {
     }),
   );
   
-  print('Status code: \${response.statusCode}');
-  print('Response body: \${response.body}');
+  print('Status code: ${response.statusCode}');
+  print('Response body: ${response.body}');
 }

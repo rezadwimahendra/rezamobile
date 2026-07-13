@@ -10,7 +10,6 @@ import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/register_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/home/presentation/bloc/steps_bloc.dart'; // Baru
 
 import 'features/meals/data/datasources/meals_remote_data_source.dart';
 import 'features/meals/data/repositories/meals_repository_impl.dart';
@@ -34,6 +33,7 @@ import 'features/professional/domain/usecases/register_professional_usecase.dart
 import 'features/professional/domain/usecases/subscribe_professional_usecase.dart';
 import 'features/professional/presentation/bloc/professional_bloc.dart';
 import 'features/home/presentation/bloc/weight_bloc.dart';
+import 'features/chat/data/datasources/chat_remote_data_source.dart';
 
 final sl = GetIt.instance;
 
@@ -69,7 +69,6 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => WeightBloc(pb: sl()));
-  sl.registerLazySingleton(() => StepsBloc()); // Baru
 
   // Use cases
   sl.registerLazySingleton(() => LoginUseCase(sl()));
@@ -105,6 +104,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<ProfessionalRemoteDataSource>(
     () => ProfessionalRemoteDataSourceImpl(pb: sl()),
+  );
+  sl.registerLazySingleton<ChatRemoteDataSource>(
+    () => ChatRemoteDataSourceImpl(sl()),
   );
   sl.registerLazySingleton(() => NutritionExternalDataSource(client: sl()));
 

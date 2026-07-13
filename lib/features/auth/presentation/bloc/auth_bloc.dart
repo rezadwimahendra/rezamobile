@@ -34,16 +34,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
     if (pb.authStore.isValid && pb.authStore.model != null) {
-      final cachedUser = UserModel.fromRecord(pb.authStore.model!);
+      final model = pb.authStore.model!;
+      final cachedUser = UserModel.fromRecord(model);
       emit(state.copyWith(status: AuthStatus.authenticated, user: cachedUser));
       
-      try {
-        final freshlyFetchedRecord = await pb.collection('users').getOne(pb.authStore.model!.id);
-        final freshUser = UserModel.fromRecord(freshlyFetchedRecord);
-        pb.authStore.save(pb.authStore.token, freshlyFetchedRecord);
-        emit(state.copyWith(status: AuthStatus.authenticated, user: freshUser));
-      } catch (e) {
-        print('DEBUG: Auth check network refresh failed: $e');
+      // Jika ini bukan superadmin, ambil record segar dari koleksi 'users'
+      final isSuperAdmin = model.getStringValue('email') == 'superadmin@fitmotion.com' || model.collectionName == '_superusers';
+      if (!isSuperAdmin) {
+        try {
+          final freshlyFetchedRecord = await pb.collection('users').getOne(model.id);
+          final freshUser = UserModel.fromRecord(freshlyFetchedRecord);
+          pb.authStore.save(pb.authStore.token, freshlyFetchedRecord);
+          emit(state.copyWith(status: AuthStatus.authenticated, user: freshUser));
+        } catch (e) {
+          print('DEBUG: Auth check network refresh failed: $e');
+        }
       }
     } else {
       emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));

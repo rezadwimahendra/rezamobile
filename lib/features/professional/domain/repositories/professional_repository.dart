@@ -3,7 +3,7 @@ import 'package:dartz/dartz.dart';
 import '../entities/professional_entity.dart';
 
 abstract class ProfessionalRepository {
-  Future<Either<String, ProfessionalEntity>> getProfessionalData(String userId, String role);
+  Future<Either<String, ProfessionalEntity?>> getProfessionalData(String userId, String role);
   
   Future<Either<String, Unit>> registerProfessional({
     required String userId,
@@ -11,10 +11,16 @@ abstract class ProfessionalRepository {
     required String name,
     required String description,
     required int price,
+    int? nonMemberPrice,
     String? specialty,
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    double? latitude,
+    double? longitude,
+    String? openTime,
+    String? closeTime,
+    String? openDays,
   });
 
   Future<Either<String, Unit>> subscribeProfessional({

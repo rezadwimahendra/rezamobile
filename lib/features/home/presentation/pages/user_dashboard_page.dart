@@ -14,12 +14,12 @@ import '../../../meals/presentation/pages/ai_food_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import './goal_edit_page.dart';
 import '../../../../injection.dart';
-import './notifications_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/weight_bloc.dart';
 import '../bloc/weight_bloc_state.dart';
 import './weight_log_page.dart';
+import './height_log_page.dart'; // Baru
 import './exercise_log_page.dart';
 import '../widgets/progress_tab.dart';
 import '../../../professional/presentation/pages/consultation_history_page.dart';
@@ -249,6 +249,10 @@ class _UserDashboardPageState extends State<UserDashboardPage> {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => WeightLogPage(currentWeight: currentWeight)));
                       _loadData();
                     },
+                    onHeightLogRequested: () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (_) => HeightLogPage(currentHeight: authUser?.height)));
+                      _loadData();
+                    },
                     onExerciseLogRequested: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const ExerciseLogPage()));
                       _loadData();
@@ -300,10 +304,6 @@ class _UserDashboardPageState extends State<UserDashboardPage> {
             centerTitle: true,
             title: const Text('FitMotion', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 24)),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.black),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage())),
-              ),
               IconButton(
                 icon: const Icon(Icons.chat_bubble_outline, color: Colors.black),
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsultationHistoryPage())),

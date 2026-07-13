@@ -8,6 +8,9 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../bloc/professional_bloc.dart';
 import '../bloc/professional_event.dart';
 import '../bloc/professional_state.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../widgets/map_picker_dialog.dart';
 
 class SetupProfessionalPage extends StatefulWidget {
   final String roleType; // 'trainer' atau 'gym'
@@ -23,13 +26,34 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
   final _nameCtrl = TextEditingController();
   final _specialtyCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _nonMemberPriceCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
+  final _latCtrl = TextEditingController();
+  final _lngCtrl = TextEditingController();
+  final _openDaysCtrl = TextEditingController();
   
   File? _avatarFile;
   final List<File> _galleryFiles = [];
   final ImagePicker _picker = ImagePicker();
   bool _isEditMode = false;
+  bool _isDataLoaded = false;
   String? _existingAvatarUrl;
+  String? _existingProfessionalId;
+  String? _openTime;
+  String? _closeTime;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _specialtyCtrl.dispose();
+    _priceCtrl.dispose();
+    _nonMemberPriceCtrl.dispose();
+    _bioCtrl.dispose();
+    _latCtrl.dispose();
+    _lngCtrl.dispose();
+    _openDaysCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -74,16 +98,31 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
     final rawPriceStr = _priceCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
     final priceNumeric = int.tryParse(rawPriceStr) ?? 0;
 
+    int? nonMemberPriceNumeric;
+    if (widget.roleType == 'gym') {
+      final rawNonMemberPriceStr = _nonMemberPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+      nonMemberPriceNumeric = int.tryParse(rawNonMemberPriceStr);
+    }
+
+    final double? lat = double.tryParse(_latCtrl.text);
+    final double? lng = double.tryParse(_lngCtrl.text);
+
     context.read<ProfessionalBloc>().add(ProfessionalRegistered(
       userId: userId,
       role: widget.roleType,
       name: _nameCtrl.text,
       description: _bioCtrl.text,
       price: priceNumeric,
+      nonMemberPrice: nonMemberPriceNumeric,
       specialty: widget.roleType == 'trainer' ? _specialtyCtrl.text : null,
       location: widget.roleType == 'gym' ? _specialtyCtrl.text : null,
       avatarFile: _avatarFile,
       galleryFiles: _galleryFiles.isNotEmpty ? _galleryFiles : null,
+      latitude: lat,
+      longitude: lng,
+      openTime: widget.roleType == 'gym' ? _openTime : null,
+      closeTime: widget.roleType == 'gym' ? _closeTime : null,
+      openDays: widget.roleType == 'gym' ? _openDaysCtrl.text : null,
     ));
   }
 
@@ -95,15 +134,23 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
     return BlocListener<ProfessionalBloc, ProfessionalState>(
       listener: (context, state) {
         if (state.status == ProfessionalStatus.success) {
-          if (state.professional != null) {
+          if (state.professional != null && !_isDataLoaded) {
             // Ini saat memuat data yang sudah ada (Load Mode)
             setState(() {
               _isEditMode = true;
+              _isDataLoaded = true;
               _nameCtrl.text = state.professional!.name;
               _bioCtrl.text = state.professional!.description;
               _priceCtrl.text = state.professional!.price.toString();
+              _nonMemberPriceCtrl.text = state.professional!.nonMemberPrice?.toString() ?? '';
               _specialtyCtrl.text = isTrainer ? (state.professional!.specialty ?? '') : (state.professional!.location ?? '');
               _existingAvatarUrl = state.professional!.avatar;
+              _latCtrl.text = state.professional!.latitude?.toString() ?? '';
+              _lngCtrl.text = state.professional!.longitude?.toString() ?? '';
+              _openTime = state.professional!.openTime;
+              _closeTime = state.professional!.closeTime;
+              _openDaysCtrl.text = state.professional!.openDays ?? '';
+              _existingProfessionalId = state.professional!.id;
             });
           } else {
             // Ini saat berhasil Simpan/Terbitkan
@@ -162,15 +209,182 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
                   hint: '',
                   controller: _specialtyCtrl,
                 ),
-                const SizedBox(height: 20),
+                if (!isTrainer) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Colors.red, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Koordinat Lokasi Peta',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _latCtrl.text.isNotEmpty && _lngCtrl.text.isNotEmpty
+                                    ? 'Lat: ${_latCtrl.text}\nLng: ${_lngCtrl.text}'
+                                    : 'Belum ditentukan (Ketuk tombol peta di bawah untuk menentukan)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: _latCtrl.text.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        side: const BorderSide(color: Color(0xFFFFB800), width: 1.5),
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () async {
+                        final curLat = double.tryParse(_latCtrl.text) ?? -6.2000;
+                        final curLng = double.tryParse(_lngCtrl.text) ?? 106.8166;
+                        final LatLng? result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MapPickerDialog(
+                              initialLocation: LatLng(curLat, curLng),
+                            ),
+                          ),
+                        );
+                        if (result != null) {
+                          setState(() {
+                            _latCtrl.text = result.latitude.toString();
+                            _lngCtrl.text = result.longitude.toString();
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.map, color: Color(0xFFFFB800)),
+                      label: const Text('Pilih Lokasi dari Peta', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 
                 _buildField(
-                  label: isTrainer ? 'Tarif per Sesi' : 'Iuran per Bulan',
-                  hint: '',
+                  label: isTrainer ? 'Tarif per Sesi' : 'Harga Member (1 Bulan)',
+                  hint: 'e.g. 350000',
                   controller: _priceCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
+                if (!isTrainer) ...[
+                  const SizedBox(height: 20),
+                  _buildField(
+                    label: 'Harga Non-Member (1 Hari)',
+                    hint: 'e.g. 45000',
+                    controller: _nonMemberPriceCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('JADWAL OPERASIONAL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueGrey, letterSpacing: 1.5)),
+                  const SizedBox(height: 16),
+                  _buildField(
+                    label: 'Hari Kerja/Operasional',
+                    hint: 'e.g. Senin - Sabtu atau Setiap Hari',
+                    controller: _openDaysCtrl,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            alignment: Alignment.centerLeft,
+                          ),
+                          onPressed: () async {
+                            final TimeOfDay? picked = await showTimePicker(
+                              context: context,
+                              initialTime: _openTime != null
+                                  ? TimeOfDay(
+                                      hour: int.parse(_openTime!.split(':')[0]),
+                                      minute: int.parse(_openTime!.split(':')[1]),
+                                    )
+                                  : const TimeOfDay(hour: 8, minute: 0),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                final hour = picked.hour.toString().padLeft(2, '0');
+                                final minute = picked.minute.toString().padLeft(2, '0');
+                                _openTime = '$hour:$minute';
+                              });
+                            }
+                          },
+                          icon: const Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: Icon(Icons.access_time_filled, color: Colors.green),
+                          ),
+                          label: Text(
+                            _openTime != null ? 'Buka: $_openTime' : 'Pilih Jam Buka',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            alignment: Alignment.centerLeft,
+                          ),
+                          onPressed: () async {
+                            final TimeOfDay? picked = await showTimePicker(
+                              context: context,
+                              initialTime: _closeTime != null
+                                  ? TimeOfDay(
+                                      hour: int.parse(_closeTime!.split(':')[0]),
+                                      minute: int.parse(_closeTime!.split(':')[1]),
+                                    )
+                                  : const TimeOfDay(hour: 22, minute: 0),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                final hour = picked.hour.toString().padLeft(2, '0');
+                                final minute = picked.minute.toString().padLeft(2, '0');
+                                _closeTime = '$hour:$minute';
+                              });
+                            }
+                          },
+                          icon: const Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: Icon(Icons.access_time_filled, color: Colors.red),
+                          ),
+                          label: Text(
+                            _closeTime != null ? 'Tutup: $_closeTime' : 'Pilih Jam Tutup',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 32),
                 
                 const Text('BIO & DESKRIPSI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueGrey, letterSpacing: 1.5)),
@@ -215,9 +429,16 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
                     border: Border.all(color: Colors.grey.shade200, width: 2),
                     image: _avatarFile != null 
                         ? DecorationImage(image: FileImage(_avatarFile!), fit: BoxFit.cover)
-                        : null,
+                        : (_existingAvatarUrl != null && _existingAvatarUrl!.isNotEmpty && _existingProfessionalId != null)
+                            ? DecorationImage(
+                                image: NetworkImage(
+                                  '${sl<PocketBase>().baseUrl}/api/files/${widget.roleType == "trainer" ? "trainers" : "gyms"}/$_existingProfessionalId/$_existingAvatarUrl?t=${DateTime.now().millisecondsSinceEpoch}',
+                                ),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                   ),
-                  child: (_avatarFile == null && _existingAvatarUrl == null)
+                  child: (_avatarFile == null && (_existingAvatarUrl == null || _existingAvatarUrl!.isEmpty))
                       ? const Icon(Icons.add_a_photo_outlined, color: Colors.grey, size: 30)
                       : null,
                 ),
@@ -292,7 +513,7 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
     );
   }
 
-  Widget _buildField({required String label, required String hint, required TextEditingController controller, int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
+  Widget _buildField({required String label, required String hint, required TextEditingController controller, int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters, bool isRequired = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -312,7 +533,12 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
           ),
-          validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+          validator: (v) {
+            if (isRequired && (v == null || v.isEmpty)) {
+              return 'Wajib diisi';
+            }
+            return null;
+          },
         ),
       ],
     );

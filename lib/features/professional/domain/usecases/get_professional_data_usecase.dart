@@ -7,7 +7,7 @@ class GetProfessionalDataUseCase {
 
   GetProfessionalDataUseCase(this.repository);
 
-  Future<Either<String, ProfessionalEntity>> call(String userId, String role) {
+  Future<Either<String, ProfessionalEntity?>> call(String userId, String role) {
     return repository.getProfessionalData(userId, role);
   }
 }

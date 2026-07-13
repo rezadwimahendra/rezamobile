@@ -112,8 +112,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
                 const SizedBox(height: 40),
 
-                // Description
-                if (prof != null) 
+                // Description & Info Operasional/Tarif
+                if (prof != null) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -122,10 +122,68 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         const Text('Tentang Kami', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         Text(prof.description, style: const TextStyle(color: Colors.black54, height: 1.5)),
+                        const SizedBox(height: 24),
+
+                        if (!widget.isTrainer) ...[
+                          const Text('Jadwal & Jam Operasional', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_filled, color: Colors.blue, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "${(prof.openDays != null && prof.openDays!.isNotEmpty) ? prof.openDays! : 'Setiap Hari'} \n(${prof.openTime ?? '08:00'} - ${prof.closeTime ?? '22:00'})",
+                                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        const Text('Informasi Tarif', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.amber.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(widget.isTrainer ? 'Tarif Per Sesi' : 'Harga Member (1 Bulan)', style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 4),
+                                    Text('Rp ${prof.price}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black87)),
+                                  ],
+                                ),
+                              ),
+                              if (!widget.isTrainer && prof.nonMemberPrice != null) ...[
+                                Container(width: 1, height: 40, color: Colors.amber.shade200, margin: const EdgeInsets.symmetric(horizontal: 12)),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Harga Non-Member (1 Hari)', style: TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 4),
+                                      Text('Rp ${prof.nonMemberPrice}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black87)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 32),
                       ],
                     ),
                   ),
+                ],
 
                 // PORTFOLIO GALLERY GRID
                 const Text('PORTFOLIO & DOKUMENTASI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.blueGrey)),

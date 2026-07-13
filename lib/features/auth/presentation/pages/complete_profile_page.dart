@@ -68,6 +68,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         'height': height,
         'initial_weight': weight,
         'goal_calories': autoGoal,
+        'emailVisibility': true,
       });
 
       // Juga simpan berat badan pertama ke koleksi 'weights'

@@ -79,15 +79,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             'passwordConfirm': password,
             'role': role,
             'birth_date': birthDate?.toIso8601String(), // Baru
+            'emailVisibility': true,
           },
         );
-
-    // Kirim email verifikasi via SMTP PocketBase
-    try {
-      await pb.collection('users').requestVerification(email);
-    } catch (e) {
-      print("DEBUG: Gagal mengirim email verifikasi: $e");
-    }
 
     return UserModel.fromRecord(record);
   }

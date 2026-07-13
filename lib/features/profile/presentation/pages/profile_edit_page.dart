@@ -33,6 +33,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
       final updatedRecord = await pb.collection('users').update(userId, body: {
         'name': _nameController.text,
+        'emailVisibility': true,
       });
 
       // Update local storage PocketBase

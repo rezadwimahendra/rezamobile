@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'core/theme/theme.dart';
 import 'injection.dart' as di;
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -10,7 +12,6 @@ import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/meals/presentation/bloc/meals_bloc.dart';
 import 'features/professional/presentation/bloc/professional_bloc.dart';
 import 'features/home/presentation/bloc/weight_bloc.dart';
-import 'features/home/presentation/bloc/steps_bloc.dart'; // Baru
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/complete_profile_page.dart';
@@ -43,17 +44,63 @@ class FitMotionApp extends StatelessWidget {
         BlocProvider(
           create: (_) => di.sl<WeightBloc>(),
         ),
-        BlocProvider(
-          create: (_) => di.sl<StepsBloc>(), // Baru
-        ),
       ],
       child: const FitMotionAppView(),
     );
   }
 }
 
-class FitMotionAppView extends StatelessWidget {
+class FitMotionAppView extends StatefulWidget {
   const FitMotionAppView({super.key});
+
+  @override
+  State<FitMotionAppView> createState() => _FitMotionAppViewState();
+}
+
+class _FitMotionAppViewState extends State<FitMotionAppView> with WidgetsBindingObserver {
+  Timer? _heartbeatTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startHeartbeat();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _heartbeatTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _sendHeartbeat();
+      _startHeartbeat();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _heartbeatTimer?.cancel();
+    }
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _sendHeartbeat();
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      _sendHeartbeat();
+    });
+  }
+
+  void _sendHeartbeat() async {
+    try {
+      final pb = di.sl<PocketBase>();
+      final userId = pb.authStore.model?.id;
+      if (userId != null) {
+        await pb.collection('users').update(userId, body: {});
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +121,7 @@ class FitMotionAppView extends StatelessWidget {
       routes: {
         '/home': (context) => const HomePage(),
         '/complete-profile': (context) => const CompleteProfilePage(),
+        '/admin': (context) => const AdminDashboardPage(),
       },
       home: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
@@ -82,6 +130,9 @@ class FitMotionAppView extends StatelessWidget {
             final user = state.user;
             if (user != null && user.role == 'admin') {
               return const AdminDashboardPage();
+            }
+            if (user != null && (user.role == 'pro' || user.isTrainer || user.isGym)) {
+              return const HomePage();
             }
             if (user != null && (user.age == 0 || user.height == 0)) {
               return const CompleteProfilePage();

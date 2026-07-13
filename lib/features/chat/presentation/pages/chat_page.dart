@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../injection.dart';
 import '../../data/datasources/chat_remote_data_source.dart';
@@ -25,6 +26,8 @@ class _ChatPageState extends State<ChatPage> {
   final List<MessageModel> _messages = [];
   bool _isLoading = true;
   String? _currentUserId;
+  bool _receiverOnline = false;
+  Timer? _statusTimer;
 
   @override
   void initState() {
@@ -33,6 +36,31 @@ class _ChatPageState extends State<ChatPage> {
     _currentUserId = sl<PocketBase>().authStore.model?.id;
     _loadMessages();
     _subscribeToMessages();
+    _checkReceiverStatus();
+    _statusTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkReceiverStatus());
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    _msgController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkReceiverStatus() async {
+    try {
+      final pb = sl<PocketBase>();
+      final res = await pb.collection('users').getOne(widget.receiverId);
+      final lastActive = DateTime.parse(res.updated).toLocal();
+      final difference = DateTime.now().difference(lastActive);
+      final online = difference.inMinutes < 3;
+      if (mounted) {
+        setState(() {
+          _receiverOnline = online;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
@@ -155,7 +183,13 @@ class _ChatPageState extends State<ChatPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.receiverName, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Online', style: TextStyle(color: Colors.green, fontSize: 11)),
+            Text(
+              _receiverOnline ? 'Online' : 'Offline',
+              style: TextStyle(
+                color: _receiverOnline ? Colors.green : Colors.grey,
+                fontSize: 11,
+              ),
+            ),
           ],
         ),
         actions: [

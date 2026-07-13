@@ -1,9 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:pocketbase/pocketbase.dart';
 import '../../../../injection.dart';
 import '../bloc/meals_bloc.dart';
 import '../bloc/meals_event.dart';
@@ -38,98 +35,10 @@ class _DiaryTabState extends State<DiaryTab> {
     super.dispose();
   }
 
-  bool _isSendingReport = false;
-
   void _fetchDiary() {
     final userId = sl<AuthBloc>().state.user?.id;
     if (userId != null) {
       context.read<MealsBloc>().add(UserMealsFetched(userId: userId, date: _selectedDate));
-    }
-  }
-
-  Future<void> _sendDailyEmailReport({
-    required String email,
-    required String userName,
-    required int totalCalories,
-    required int goalCalories,
-    required int remainingCalories,
-    required List<dynamic> meals,
-  }) async {
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email pengguna tidak ditemukan!'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSendingReport = true;
-    });
-
-    try {
-      final pbUrl = sl<PocketBase>().baseUrl;
-      final baseIpUri = Uri.parse(pbUrl);
-      final middlewareUrl = 'http://${baseIpUri.host}:3000/send-report';
-
-      final client = sl<http.Client>();
-      
-      final formattedMeals = meals.map((m) => {
-        'name': m.food.name,
-        'calories': m.food.calories * m.servings,
-        'mealType': m.mealType,
-      }).toList();
-
-      final response = await client.post(
-        Uri.parse(middlewareUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'userName': userName,
-          'date': DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate),
-          'totalCalories': totalCalories,
-          'goalCalories': goalCalories,
-          'remainingCalories': remainingCalories,
-          'meals': formattedMeals,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final resData = json.decode(response.body);
-        String msg = resData['message'] ?? 'Laporan berhasil dikirim ke email!';
-        if (resData['previewUrl'] != null) {
-          print("DEBUG Ethereal Mail URL: ${resData['previewUrl']}");
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(msg),
-                if (resData['previewUrl'] != null)
-                  Text(
-                    'Preview: ${resData['previewUrl']}',
-                    style: const TextStyle(fontSize: 11, color: Colors.yellowAccent),
-                  ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 8),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengirim: ${response.body}'), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menghubungi email server ($e)'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() {
-        _isSendingReport = false;
-      });
     }
   }
 
@@ -339,69 +248,6 @@ class _DiaryTabState extends State<DiaryTab> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200, width: 1.5),
-                    ),
-                    color: Colors.grey.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: widget.primaryColor.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.mark_email_unread_outlined, color: Colors.black87, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Kirim Laporan Harian',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-                                ),
-                                Text(
-                                  'Kirim ringkasan makan hari ini ke email Anda.',
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _isSendingReport 
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                                )
-                              : TextButton(
-                                  onPressed: () => _sendDailyEmailReport(
-                                    email: authState.user?.email ?? '',
-                                    userName: authState.user?.name ?? '',
-                                    totalCalories: totalCals,
-                                    goalCalories: goalCals,
-                                    remainingCalories: remaining,
-                                    meals: mealsState.userMeals,
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.black,
-                                    backgroundColor: widget.primaryColor,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  ),
-                                  child: const Text('Kirim', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   _buildMealCard(context, 'Sarapan', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['sarapan'] ?? []),
                   _buildMealCard(context, 'Makan Siang', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['makan siang'] ?? []),
                   _buildMealCard(context, 'Makan Malam', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['makan malam'] ?? []),

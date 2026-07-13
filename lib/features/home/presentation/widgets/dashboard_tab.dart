@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Baru
-import '../bloc/steps_bloc.dart'; // Baru
-import '../bloc/steps_event.dart'; // Baru
-import '../bloc/steps_state.dart'; // Baru
-
+import 'package:flutter_bloc/flutter_bloc.dart';
 class DashboardTab extends StatefulWidget {
   final Color primaryColor;
   final int totalCalories;
@@ -20,6 +16,7 @@ class DashboardTab extends StatefulWidget {
   final VoidCallback? onDateTap; // Baru: Untuk buka kalender
   final VoidCallback onEditRequested;
   final VoidCallback onWeightLogRequested;
+  final VoidCallback onHeightLogRequested;
   final VoidCallback onExerciseLogRequested;
 
   const DashboardTab({
@@ -39,6 +36,7 @@ class DashboardTab extends StatefulWidget {
     this.onDateTap, // Baru
     required this.onEditRequested,
     required this.onWeightLogRequested,
+    required this.onHeightLogRequested,
     required this.onExerciseLogRequested,
   });
 
@@ -130,49 +128,7 @@ class _DashboardTabState extends State<DashboardTab> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: BlocBuilder<StepsBloc, StepsState>(
-                builder: (context, state) {
-                  String label = 'Hubungkan...';
-                  int steps = 0;
-                  if (state is StepsLoaded) {
-                    steps = state.steps;
-                    label = '$steps Langkah';
-                  } else if (state is StepsLoading) {
-                    label = 'Menghubungkan...';
-                  }
 
-                  return _card(
-                    'Langkah',
-                    Row(
-                      children: [
-                        const Icon(Icons.directions_walk, color: Colors.pink, size: 24),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            label, 
-                            style: TextStyle(
-                              fontSize: state is StepsLoaded ? 14 : 9, 
-                              color: state is StepsLoaded ? Colors.black : Colors.grey,
-                              fontWeight: state is StepsLoaded ? FontWeight.bold : FontWeight.normal,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        if (state is! StepsLoaded) Icon(Icons.chevron_right, size: 14, color: Colors.grey.shade400),
-                      ],
-                    ),
-                    onTap: () {
-                      if (state is StepsInitial || state is StepsPermissionDenied) {
-                        context.read<StepsBloc>().add(StepsStarted());
-                      }
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: _card(
                 'Latihan',
@@ -215,7 +171,8 @@ class _DashboardTabState extends State<DashboardTab> {
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
                 ),
                 subtitle: 'Terdaftar',
-                showPlus: false,
+                showPlus: true,
+                onPlusTap: widget.onHeightLogRequested,
               ),
             ),
           ],
@@ -290,15 +247,7 @@ class _DashboardTabState extends State<DashboardTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: _activityStat(Icons.directions_run, '${widget.totalMinutes}/30', 'Menit', Colors.green)),
-                Expanded(
-                  child: BlocBuilder<StepsBloc, StepsState>(
-                    builder: (context, state) {
-                      int steps = 0;
-                      if (state is StepsLoaded) steps = state.steps;
-                      return _activityStat(Icons.do_not_step, '$steps/6k', 'Langkah', Colors.blue);
-                    },
-                  ),
-                ),
+                const SizedBox(width: 12),
                 Expanded(child: _activityStat(Icons.map, widget.totalDistance.toStringAsFixed(1), 'Jarak', Colors.purple)),
               ],
             ),

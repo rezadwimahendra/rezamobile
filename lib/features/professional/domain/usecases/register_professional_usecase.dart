@@ -13,10 +13,16 @@ class RegisterProfessionalUseCase {
     required String name,
     required String description,
     required int price,
+    int? nonMemberPrice,
     String? specialty,
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    double? latitude,
+    double? longitude,
+    String? openTime,
+    String? closeTime,
+    String? openDays,
   }) {
     return repository.registerProfessional(
       userId: userId,
@@ -24,10 +30,16 @@ class RegisterProfessionalUseCase {
       name: name,
       description: description,
       price: price,
+      nonMemberPrice: nonMemberPrice,
       specialty: specialty,
       location: location,
       avatarFile: avatarFile,
       galleryFiles: galleryFiles,
+      latitude: latitude,
+      longitude: longitude,
+      openTime: openTime,
+      closeTime: closeTime,
+      openDays: openDays,
     );
   }
 }

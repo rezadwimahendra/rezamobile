@@ -10,7 +10,7 @@ class ProfessionalRepositoryImpl implements ProfessionalRepository {
   ProfessionalRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<String, ProfessionalEntity>> getProfessionalData(String userId, String role) async {
+  Future<Either<String, ProfessionalEntity?>> getProfessionalData(String userId, String role) async {
     try {
       final result = await remoteDataSource.getProfessionalData(userId, role);
       return Right(result);
@@ -26,10 +26,16 @@ class ProfessionalRepositoryImpl implements ProfessionalRepository {
     required String name,
     required String description,
     required int price,
+    int? nonMemberPrice,
     String? specialty,
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    double? latitude,
+    double? longitude,
+    String? openTime,
+    String? closeTime,
+    String? openDays,
   }) async {
     try {
       await remoteDataSource.registerProfessional(
@@ -38,10 +44,16 @@ class ProfessionalRepositoryImpl implements ProfessionalRepository {
         name: name,
         description: description,
         price: price,
+        nonMemberPrice: nonMemberPrice,
         specialty: specialty,
         location: location,
         avatarFile: avatarFile,
         galleryFiles: galleryFiles,
+        latitude: latitude,
+        longitude: longitude,
+        openTime: openTime,
+        closeTime: closeTime,
+        openDays: openDays,
       );
       return const Right(unit);
     } catch (e) {

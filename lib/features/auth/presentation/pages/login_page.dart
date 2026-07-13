@@ -35,7 +35,9 @@ class _LoginPageState extends State<LoginPage> {
       listener: (context, state) {
         if (state.status == AuthStatus.authenticated) {
           final user = state.user;
-          if (user != null && (user.age == 0 || user.height == 0)) {
+          if (user != null && user.role == 'admin') {
+            Navigator.of(context).pushNamedAndRemoveUntil('/admin', (root) => false);
+          } else if (user != null && (user.age == 0 || user.height == 0)) {
             Navigator.of(context).pushNamedAndRemoveUntil('/complete-profile', (root) => false);
           } else {
             Navigator.of(context).pushNamedAndRemoveUntil('/home', (root) => false);

@@ -4,17 +4,23 @@ import 'package:http/http.dart' as http;
 import '../models/professional_model.dart';
 
 abstract class ProfessionalRemoteDataSource {
-  Future<ProfessionalModel> getProfessionalData(String userId, String role);
+  Future<ProfessionalModel?> getProfessionalData(String userId, String role);
   Future<void> registerProfessional({
     required String userId,
     required String role,
     required String name,
     required String description,
     required int price,
+    int? nonMemberPrice,
     String? specialty,
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    double? latitude,
+    double? longitude,
+    String? openTime,
+    String? closeTime,
+    String? openDays,
   });
   Future<RecordModel> subscribeProfessional(String userId, String roleType);
   Future<List<ProfessionalModel>> getAllTrainers();
@@ -27,10 +33,17 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
   ProfessionalRemoteDataSourceImpl({required this.pb});
 
   @override
-  Future<ProfessionalModel> getProfessionalData(String userId, String role) async {
+  Future<ProfessionalModel?> getProfessionalData(String userId, String role) async {
     final collection = role == 'trainer' ? 'trainers' : 'gyms';
-    final result = await pb.collection(collection).getFirstListItem('user = "$userId"');
-    return ProfessionalModel.fromRecord(result);
+    try {
+      final result = await pb.collection(collection).getFirstListItem('user = "$userId"');
+      return ProfessionalModel.fromRecord(result);
+    } on ClientException catch (e) {
+      if (e.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -40,10 +53,16 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
     required String name,
     required String description,
     required int price,
+    int? nonMemberPrice,
     String? specialty,
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    double? latitude,
+    double? longitude,
+    String? openTime,
+    String? closeTime,
+    String? openDays,
   }) async {
     final collection = role == 'trainer' ? 'trainers' : 'gyms';
     
@@ -54,8 +73,14 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
       'description': description,
       'price': price,
     };
+    if (nonMemberPrice != null) body['non_member_price'] = nonMemberPrice;
     if (specialty != null) body['specialty'] = specialty;
     if (location != null) body['location'] = location;
+    if (latitude != null) body['latitude'] = latitude;
+    if (longitude != null) body['longitude'] = longitude;
+    if (openTime != null) body['open_time'] = openTime;
+    if (closeTime != null) body['close_time'] = closeTime;
+    if (openDays != null) body['open_days'] = openDays;
 
     // Siapkan file list
     final List<http.MultipartFile> files = [];

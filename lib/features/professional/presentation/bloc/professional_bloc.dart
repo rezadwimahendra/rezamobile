@@ -34,7 +34,14 @@ class ProfessionalBloc extends Bloc<ProfessionalEvent, ProfessionalState> {
     final result = await getProfessionalDataUseCase(event.userId, event.role);
     result.fold(
       (failure) => emit(state.copyWith(status: ProfessionalStatus.error, errorMessage: failure)),
-      (professional) => emit(state.copyWith(status: ProfessionalStatus.success, professional: professional)),
+      (professional) {
+        if (professional == null) {
+          // User belum mendaftarkan profil bisnis, emit status initial secara aman
+          emit(state.copyWith(status: ProfessionalStatus.initial, professional: null));
+        } else {
+          emit(state.copyWith(status: ProfessionalStatus.success, professional: professional));
+        }
+      },
     );
   }
 
@@ -46,10 +53,16 @@ class ProfessionalBloc extends Bloc<ProfessionalEvent, ProfessionalState> {
       name: event.name,
       description: event.description,
       price: event.price,
+      nonMemberPrice: event.nonMemberPrice,
       specialty: event.specialty,
       location: event.location,
       avatarFile: event.avatarFile,
       galleryFiles: event.galleryFiles,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      openTime: event.openTime,
+      closeTime: event.closeTime,
+      openDays: event.openDays,
     );
     result.fold(
       (failure) => emit(state.copyWith(status: ProfessionalStatus.error, errorMessage: failure)),

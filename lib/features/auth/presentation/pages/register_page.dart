@@ -121,13 +121,13 @@ class _RegisterPageState extends State<RegisterPage> {
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              icon: const Icon(Icons.mark_email_unread_outlined, size: 64, color: Colors.blue),
+              icon: const Icon(Icons.check_circle_outline_rounded, size: 64, color: Colors.green),
               title: const Text(
-                'Verifikasi Email Terkirim',
+                'Registrasi Berhasil',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
               content: const Text(
-                'Pendaftaran sukses! Silakan periksa inbox email Anda untuk mengklik tautan verifikasi sebelum masuk.',
+                'Pendaftaran akun sukses! Silakan masuk menggunakan email dan kata sandi yang telah didaftarkan.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, height: 1.4),
               ),

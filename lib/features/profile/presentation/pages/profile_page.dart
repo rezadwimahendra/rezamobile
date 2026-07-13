@@ -12,7 +12,6 @@ import '../../../professional/presentation/pages/gym_dashboard_page.dart';
 import '../../../professional/presentation/pages/subscription_page.dart';
 import '../../../auth/presentation/pages/complete_profile_page.dart';
 import './security_settings_page.dart';
-import './notification_settings_page.dart';
 import './help_center_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -68,8 +67,14 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
-        listenWhen: (previous, current) => previous.isUploadingAvatar == true && current.isUploadingAvatar == false,
+        listenWhen: (previous, current) => 
+            (previous.isUploadingAvatar == true && current.isUploadingAvatar == false) ||
+            (previous.status == AuthStatus.authenticated && current.status == AuthStatus.unauthenticated),
         listener: (context, state) {
+          if (state.status == AuthStatus.unauthenticated) {
+            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            return;
+          }
           if (state.avatarErrorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -254,9 +259,6 @@ class ProfilePage extends StatelessWidget {
                     items: [
                       _buildMenuItem(Icons.person_outline, 'Informasi Pribadi', () {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const CompleteProfilePage()));
-                      }),
-                      _buildMenuItem(Icons.notifications_none, 'Notifikasi', () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage()));
                       }),
                       _buildMenuItem(Icons.shield_outlined, 'Keamanan Akun', () {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const SecuritySettingsPage()));

@@ -12,8 +12,10 @@ class UserEntity extends Equatable {
   final bool isTrainer;
   final bool isGym;
   final String? avatar;
+  final int? dbAge;
 
   int get age {
+    if (dbAge != null && dbAge! > 0) return dbAge!;
     if (birthDate == null) return 0;
     final now = DateTime.now();
     int age = now.year - birthDate!.year;
@@ -35,8 +37,9 @@ class UserEntity extends Equatable {
     this.height = 0,
     this.initialWeight = 0,
     this.avatar,
+    this.dbAge,
   });
 
   @override
-  List<Object?> get props => [id, email, name, role, isTrainer, isGym, goalCalories, birthDate, height, initialWeight, avatar];
+  List<Object?> get props => [id, email, name, role, isTrainer, isGym, goalCalories, birthDate, height, initialWeight, avatar, dbAge];
 }
