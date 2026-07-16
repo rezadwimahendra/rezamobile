@@ -53,8 +53,8 @@ class GroqService {
       int count = prefs.getInt('ai_daily_analysis_count') ?? 0;
       
       if (lastAnalysisDate == todayStr) {
-        if (count >= 3) {
-          throw 'Batas kuota harian tercapai. Anda hanya bisa menggunakan fitur AI 3 kali per hari. Silakan coba lagi besok!';
+        if (count >= 2) {
+          throw 'Batas kuota harian tercapai. Anda hanya bisa menggunakan fitur AI 2 kali per hari. Silakan coba lagi besok!';
         }
       }
 
