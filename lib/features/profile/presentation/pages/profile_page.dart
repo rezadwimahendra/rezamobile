@@ -142,13 +142,69 @@ class ProfilePage extends StatelessWidget {
                               shape: BoxShape.circle, 
                               border: Border.all(color: primaryColor.withOpacity(0.5), width: 2)
                             ),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.grey.shade100,
-                              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                              child: avatarUrl == null 
-                                ? Text(initial, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87))
-                                : null,
+                            child: GestureDetector(
+                              onTap: avatarUrl == null
+                                  ? null
+                                  : () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => Dialog.fullscreen(
+                                          backgroundColor: Colors.black.withOpacity(0.95),
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () => Navigator.pop(context),
+                                                child: Container(
+                                                  color: Colors.transparent,
+                                                  width: double.infinity,
+                                                  height: double.infinity,
+                                                ),
+                                              ),
+                                              InteractiveViewer(
+                                                child: Image.network(
+                                                  avatarUrl,
+                                                  fit: BoxFit.contain,
+                                                  width: double.infinity,
+                                                  height: double.infinity,
+                                                ),
+                                              ),
+                                              Positioned(
+                                                top: MediaQuery.of(context).padding.top + 16,
+                                                right: 20,
+                                                child: GestureDetector(
+                                                  onTap: () => Navigator.pop(context),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(10),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white.withOpacity(0.2),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.close,
+                                                      color: Colors.white,
+                                                      size: 22,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey.shade100,
+                                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                                child: avatarUrl == null
+                                    ? Text(initial,
+                                        style: const TextStyle(
+                                            fontSize: 40,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87))
+                                    : null,
+                              ),
                             ),
                           ),
                           if (state.isUploadingAvatar == true)
