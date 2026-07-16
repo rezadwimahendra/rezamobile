@@ -178,129 +178,136 @@ class SubscriptionPage extends StatelessWidget {
             ),
             // Content
             SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menyebar rata
-                  children: [
-                    // Header Row
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: const Icon(Icons.close, color: Colors.white, size: 28),
-                        ),
-                      ],
-                    ),
-                    
-                    // Main Info
-                    Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: primaryColor),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Text(
-                            isTrainer 
-                                ? 'FITMOTION PRO' 
-                                : isGym 
-                                    ? 'BUSINESS PARTNER' 
-                                    : 'FITMOTION PREMIUM', 
-                            style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          isTrainer 
-                              ? 'Tingkatkan Layanan\nKarir Anda Sekarang.' 
-                              : isGym 
-                                  ? 'Digitalisasi Bisnis\nFitness Anda.'
-                                  : 'Buka Analisis Nutrisi\n& Tren Kemajuan Anda.',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
-                        ),
-                      ],
-                    ),
-
-                    // Price Card
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white10),
-                      ),
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menyebar rata
                         children: [
+                          // Header Row
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('Rp', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 4),
-                              Text(priceText, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white)),
-                              Text(isPro ? ' /bln' : ' (Sekali Bayar)', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: const Icon(Icons.close, color: Colors.white, size: 28),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            isPro 
-                                ? 'Paket aktif selama 30 hari sejak sukses pembayaran'
-                                : 'Kemitraan aktif selamanya (Permanen)',
-                            style: const TextStyle(color: Color(0xFFFFB800), fontSize: 10, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
+                          
+                          // Main Info
+                          Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: primaryColor),
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Text(
+                                  isTrainer 
+                                      ? 'FITMOTION PRO' 
+                                      : isGym 
+                                          ? 'BUSINESS PARTNER' 
+                                          : 'FITMOTION PREMIUM', 
+                                  style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                isTrainer 
+                                    ? 'Tingkatkan Layanan\nKarir Anda Sekarang.' 
+                                    : isGym 
+                                        ? 'Digitalisasi Bisnis\nFitness Anda.'
+                                        : 'Buka Analisis Nutrisi\n& Tren Kemajuan Anda.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          const Divider(color: Colors.white10),
-                          const SizedBox(height: 16),
-                          if (isPro) ...[
-                            _buildTick('Grafik Tren Berat Badan Lengkap'),
-                            _buildTick('Analisis Keseimbangan Makronutrisi'),
-                            _buildTick('Rekomendasi Menu Makanan Harian'),
-                          ] else ...[
-                            _buildTick(isTrainer ? 'Akses Dashboard Trainer' : 'Akses Dashboard Bisnis Gym'),
-                            _buildTick(isTrainer ? 'Priority Trainer Search' : 'Priority Gym Search'),
-                            _buildTick(isTrainer ? 'Kelola Klien Tanpa Batas' : 'Kelola Member & Fasilitas'),
-                          ]
+
+                          // Price Card
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text('Rp', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 4),
+                                    Text(priceText, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white)),
+                                    Text(isPro ? ' /bln' : ' (Sekali Bayar)', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  isPro 
+                                      ? 'Paket aktif selama 30 hari sejak sukses pembayaran'
+                                      : 'Kemitraan aktif selamanya (Permanen)',
+                                  style: const TextStyle(color: Color(0xFFFFB800), fontSize: 10, fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                const Divider(color: Colors.white10),
+                                const SizedBox(height: 16),
+                                if (isPro) ...[
+                                  _buildTick('Grafik Tren Berat Badan Lengkap'),
+                                  _buildTick('Analisis Keseimbangan Makronutrisi'),
+                                  _buildTick('Rekomendasi Menu Makanan Harian'),
+                                ] else ...[
+                                  _buildTick(isTrainer ? 'Akses Dashboard Trainer' : 'Akses Dashboard Bisnis Gym'),
+                                  _buildTick(isTrainer ? 'Priority Trainer Search' : 'Priority Gym Search'),
+                                  _buildTick(isTrainer ? 'Kelola Klien Tanpa Batas' : 'Kelola Member & Fasilitas'),
+                                ]
+                              ],
+                            ),
+                          ),
+
+                          // Bottom Section
+                          Column(
+                            children: [
+                              BlocBuilder<ProfessionalBloc, ProfessionalState>(
+                                builder: (context, state) {
+                                  final isLoading = state.status == ProfessionalStatus.loading;
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    height: 56,
+                                    child: ElevatedButton(
+                                      onPressed: isLoading ? null : () => _startPaymentFlow(context),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      child: isLoading 
+                                        ? const CircularProgressIndicator(color: Colors.black)
+                                        : const Text('AKTIFKAN SEKARANG', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                isPro
+                                    ? 'Aman via Midtrans Gateway • Masa Aktif 30 Hari'
+                                    : 'Aman via Midtrans Gateway • Akses Permanen / Lifetime',
+                                style: const TextStyle(color: Colors.white24, fontSize: 9),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-
-                    // Bottom Section
-                    Column(
-                      children: [
-                        BlocBuilder<ProfessionalBloc, ProfessionalState>(
-                          builder: (context, state) {
-                            final isLoading = state.status == ProfessionalStatus.loading;
-                            return SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : () => _startPaymentFlow(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                ),
-                                child: isLoading 
-                                  ? const CircularProgressIndicator(color: Colors.black)
-                                  : const Text('AKTIFKAN SEKARANG', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          isPro
-                              ? 'Aman via Midtrans Gateway • Masa Aktif 30 Hari'
-                              : 'Aman via Midtrans Gateway • Akses Permanen / Lifetime',
-                          style: const TextStyle(color: Colors.white24, fontSize: 9),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
