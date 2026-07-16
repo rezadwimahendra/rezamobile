@@ -29,7 +29,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       senderId: record.getStringValue('sender'),
       receiverId: record.getStringValue('receiver'),
       text: record.getStringValue('text'),
-      createdAt: DateTime.parse(record.created),
+      createdAt: DateTime.parse(record.created).toLocal(),
     )).toList();
   }
 
@@ -49,7 +49,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
       senderId: record.getStringValue('sender'),
       receiverId: record.getStringValue('receiver'),
       text: record.getStringValue('text'),
-      createdAt: DateTime.parse(record.created),
+      createdAt: DateTime.parse(record.created).toLocal(),
     );
   }
 

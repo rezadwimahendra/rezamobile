@@ -208,12 +208,80 @@ class _ChatPageState extends State<ChatPage> {
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
                       final isMe = msg.senderId == _currentUserId;
+                      
+                      final showSeparator = _shouldShowDateSeparator(index);
+                      
+                      if (showSeparator) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildDateSeparator(_formatDateSeparator(msg.createdAt)),
+                            _buildChatBubble(msg, isMe),
+                          ],
+                        );
+                      }
+                      
                       return _buildChatBubble(msg, isMe);
                     },
                   ),
           ),
           _buildMessageInput(primaryColor),
         ],
+      ),
+    );
+  }
+
+  bool _shouldShowDateSeparator(int index) {
+    if (index == 0) return true;
+    final prevMsg = _messages[index - 1];
+    final currentMsg = _messages[index];
+    
+    return prevMsg.createdAt.year != currentMsg.createdAt.year ||
+        prevMsg.createdAt.month != currentMsg.createdAt.month ||
+        prevMsg.createdAt.day != currentMsg.createdAt.day;
+  }
+
+  String _formatDateSeparator(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final msgDate = DateTime(date.year, date.month, date.day);
+    
+    if (msgDate == today) {
+      return 'Hari ini';
+    } else if (msgDate == yesterday) {
+      return 'Kemarin';
+    } else {
+      final List<String> dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      final List<String> monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      
+      final dayName = dayNames[date.weekday - 1];
+      final monthName = monthNames[date.month - 1];
+      
+      return '$dayName, ${date.day} $monthName ${date.year}';
+    }
+  }
+
+  Widget _buildDateSeparator(String text) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

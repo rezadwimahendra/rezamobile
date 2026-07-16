@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../meals/data/services/gemini_service.dart';
+import '../../../meals/data/services/groq_service.dart';
 import '../widgets/dashboard_tab.dart';
 import '../../../meals/presentation/widgets/diary_tab.dart';
 import '../../../meals/presentation/bloc/meals_bloc.dart';
@@ -150,7 +150,8 @@ class _UserDashboardPageState extends State<UserDashboardPage> {
     );
 
     try {
-      final String? foodName = await sl<GeminiService>().identifyFood(photo);
+      final AIAnalysisResult? result = await sl<GroqService>().identifyFood(photo);
+      final String? foodName = result?.foodName;
       
       if (mounted) {
         Navigator.pop(context); // Tutup loading dialog
@@ -199,8 +200,10 @@ class _UserDashboardPageState extends State<UserDashboardPage> {
         final String initial = currentUserName.isNotEmpty ? currentUserName[0].toUpperCase() : 'U';
         final pb = sl<PocketBase>();
         final avatarUrl = (authUser?.avatar != null && authUser!.avatar!.isNotEmpty)
-            ? "${pb.baseUrl}/api/files/users/${authUser.id}/${authUser.avatar}?t=${authUser.avatar}"
+            ? "${pb.baseUrl}/api/files/users/${authUser.id}/${authUser.avatar}?t=${authUser.updated}"
             : null;
+
+        debugPrint('DEBUG: dashboard avatarUrl = $avatarUrl');
 
         final List<Widget> pages = [
           // Index 0: Dasbor

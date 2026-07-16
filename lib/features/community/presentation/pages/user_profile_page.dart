@@ -203,11 +203,62 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       ),
                       itemBuilder: (context, index) {
                         final fileUrl = "$baseUrl/api/files/$collection/${prof.id}/${prof.gallery![index]}";
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                            image: DecorationImage(image: NetworkImage(fileUrl), fit: BoxFit.cover),
+                        return GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => Dialog.fullscreen(
+                                backgroundColor: Colors.black.withOpacity(0.95),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Ketuk area manapun di latar belakang untuk menutup
+                                    GestureDetector(
+                                      onTap: () => Navigator.pop(context),
+                                      child: Container(
+                                        color: Colors.transparent,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    ),
+                                    InteractiveViewer(
+                                      child: Image.network(
+                                        fileUrl,
+                                        fit: BoxFit.contain,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: MediaQuery.of(context).padding.top + 16,
+                                      right: 20,
+                                      child: GestureDetector(
+                                        onTap: () => Navigator.pop(context),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(image: NetworkImage(fileUrl), fit: BoxFit.cover),
+                            ),
                           ),
                         );
                       },

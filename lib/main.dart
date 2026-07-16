@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/theme/theme.dart';
 import 'injection.dart' as di;
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -19,7 +20,9 @@ import 'features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'features/auth/presentation/pages/splash_screen_page.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
   await initializeDateFormatting('id_ID', null);
   await di.init();
 

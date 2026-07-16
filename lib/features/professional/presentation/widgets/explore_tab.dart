@@ -47,8 +47,7 @@ class _ExploreTabState extends State<ExploreTab> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Jelajah FitMotion', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.black)),
-        centerTitle: true,
+        toolbarHeight: 0,
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(

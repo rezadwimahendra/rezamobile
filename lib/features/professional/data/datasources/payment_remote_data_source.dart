@@ -35,7 +35,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
           'first_name': customerName,
           'email': customerEmail,
         }),
-      ).timeout(const Duration(seconds: 5)); // Batas tunggu 5 detik
+      ).timeout(const Duration(seconds: 20)); // Batas tunggu 20 detik (mencegah timeout cold-start server)
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

@@ -15,6 +15,8 @@ class UserModel extends UserEntity {
     super.initialWeight = 0.0,
     super.avatar,
     super.dbAge,
+    super.subscriptionExpires,
+    super.updated,
   });
 
   factory UserModel.fromRecord(RecordModel record) {
@@ -36,6 +38,10 @@ class UserModel extends UserEntity {
       initialWeight: isSuperAdmin ? 60.0 : record.getDoubleValue('initial_weight'),
       avatar: record.getStringValue('avatar'),
       dbAge: record.data.containsKey('age') ? record.getIntValue('age') : null,
+      subscriptionExpires: record.getStringValue('subscription_expires').isNotEmpty 
+          ? DateTime.parse(record.getStringValue('subscription_expires')) 
+          : null,
+      updated: record.updated,
     );
   }
 }

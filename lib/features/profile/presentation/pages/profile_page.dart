@@ -108,12 +108,20 @@ class ProfilePage extends StatelessWidget {
               memberStatus = 'Professional Trainer';
             } else if (user.isGym) {
               memberStatus = 'Business Partner';
+            } else if (user.role == 'pro') {
+              if (user.isSubscriptionActive) {
+                memberStatus = 'FitMotion Pro';
+              } else {
+                memberStatus = 'Premium Berakhir';
+              }
             }
           }
 
           final avatarUrl = (user?.avatar != null && user!.avatar!.isNotEmpty)
-              ? "${pb.baseUrl}/api/files/users/${user.id}/${user.avatar}?t=${user.avatar}"
+              ? "${pb.baseUrl}/api/files/users/${user.id}/${user.avatar}?t=${user.updated}"
               : null;
+
+          debugPrint('DEBUG: profile page avatarUrl = $avatarUrl');
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -227,7 +235,7 @@ class ProfilePage extends StatelessWidget {
                         Icons.verified_user_outlined, 
                         'FitMotion Pro Trainer', 
                         () {
-                          if (user?.isTrainer ?? false) {
+                          if (user?.hasTrainerRole ?? false) {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => TrainerDashboardPage(userName: user!.name)));
                           } else {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionPage(roleType: 'trainer')));
@@ -238,7 +246,7 @@ class ProfilePage extends StatelessWidget {
                         Icons.storefront_outlined, 
                         'FitMotion Business Partner', 
                         () {
-                          if (user?.isGym ?? false) {
+                          if (user?.hasGymRole ?? false) {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => GymDashboardPage(userName: user!.name)));
                           } else {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionPage(roleType: 'gym')));

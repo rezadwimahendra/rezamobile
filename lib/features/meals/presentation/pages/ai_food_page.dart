@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../injection.dart';
-import '../../data/services/gemini_service.dart';
+import '../../data/services/groq_service.dart';
 import 'food_search_page.dart';
 
 class AiFoodPage extends StatefulWidget {
@@ -19,6 +19,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
   Uint8List? _imageBytes;
   bool _isAnalyzing = false;
   String? _detectedFood;
+  AIAnalysisResult? _analysisResult;
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -34,6 +35,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
           _imageXFile = pickedFile;
           _imageBytes = bytes;
           _detectedFood = null; // Reset hasil sebelumnya
+          _analysisResult = null;
         });
       }
     } catch (e) {
@@ -49,15 +51,17 @@ class _AiFoodPageState extends State<AiFoodPage> {
     setState(() {
       _isAnalyzing = true;
       _detectedFood = null;
+      _analysisResult = null;
     });
 
     try {
-      final String? foodName = await sl<GeminiService>().identifyFood(_imageXFile!);
+      final AIAnalysisResult? result = await sl<GroqService>().identifyFood(_imageXFile!);
 
       setState(() {
         _isAnalyzing = false;
-        if (foodName != null && foodName.isNotEmpty) {
-          _detectedFood = foodName;
+        if (result != null) {
+          _analysisResult = result;
+          _detectedFood = result.foodName;
         } else {
           _detectedFood = "Makanan tidak dikenali";
         }
@@ -70,6 +74,30 @@ class _AiFoodPageState extends State<AiFoodPage> {
         SnackBar(content: Text('Error Analisis: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Widget _buildNutritionInfo(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.15), width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
   }
 
   void _navigateToSearch() {
@@ -134,7 +162,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
                                   CircularProgressIndicator(color: Color(0xFFFFB800)),
                                   SizedBox(height: 20),
                                   Text(
-                                    'Gemini sedang menganalisis...',
+                                    'Sedang menganalisis makanan...',
                                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
                                 ],
@@ -194,7 +222,21 @@ class _AiFoodPageState extends State<AiFoodPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: widget.primaryColor),
                   ),
-                  const SizedBox(height: 12),
+                  if (_analysisResult != null) ...[
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: widget.primaryColor.withOpacity(0.2)),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNutritionInfo('Kalori', '${_analysisResult!.calories} kal', Colors.orange.shade700),
+                        _buildNutritionInfo('Protein', '${_analysisResult!.protein}g', Colors.green.shade700),
+                        _buildNutritionInfo('Karbo', '${_analysisResult!.carbs}g', Colors.blue.shade700),
+                        _buildNutritionInfo('Lemak', '${_analysisResult!.fat}g', Colors.red.shade700),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
                   if (_detectedFood != "Makanan tidak dikenali")
                     ElevatedButton.icon(
                       onPressed: _navigateToSearch,

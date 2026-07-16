@@ -31,6 +31,7 @@ dependencies:
   flutter_map: ^8.3.1
   latlong2: ^0.10.1
   geolocator: ^14.0.2
+  flutter_native_splash: ^2.4.0
 
 dev_dependencies:
   flutter_test:
@@ -43,16 +44,17 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/logo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/logo.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
-    - assets/splash.png
 
 flutter_native_splash:
-  color: "#ffffff"
-  image: assets/splash.png
+  color: "#ffb800"
+  image: assets/splash_square.png
   android_12:
-    image: assets/splash.png
-    color: "#ffffff"
+    image: assets/splash_square.png
+    color: "#ffb800"

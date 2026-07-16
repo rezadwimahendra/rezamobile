@@ -6,13 +6,36 @@ class UserEntity extends Equatable {
   final String name;
   final String role;
   final int goalCalories;
-  final DateTime? birthDate; // Baru
+  final DateTime? birthDate; 
   final int height;
   final double initialWeight;
   final bool isTrainer;
   final bool isGym;
   final String? avatar;
   final int? dbAge;
+  final DateTime? subscriptionExpires;
+  final String? updated; // Baru untuk cache busting
+
+  bool get isSubscriptionActive {
+    if (subscriptionExpires == null) return true; // Legacy/lifetime subscription
+    return subscriptionExpires!.isAfter(DateTime.now());
+  }
+
+  bool get hasPro {
+    return role == 'pro' && isSubscriptionActive;
+  }
+
+  bool get hasTrainerRole {
+    return isTrainer;
+  }
+
+  bool get hasGymRole {
+    return isGym;
+  }
+
+  bool get hasAnyPremium {
+    return hasPro || hasTrainerRole || hasGymRole;
+  }
 
   int get age {
     if (dbAge != null && dbAge! > 0) return dbAge!;
@@ -38,8 +61,25 @@ class UserEntity extends Equatable {
     this.initialWeight = 0,
     this.avatar,
     this.dbAge,
+    this.subscriptionExpires,
+    this.updated,
   });
 
   @override
-  List<Object?> get props => [id, email, name, role, isTrainer, isGym, goalCalories, birthDate, height, initialWeight, avatar, dbAge];
+  List<Object?> get props => [
+        id,
+        email,
+        name,
+        role,
+        isTrainer,
+        isGym,
+        goalCalories,
+        birthDate,
+        height,
+        initialWeight,
+        avatar,
+        dbAge,
+        subscriptionExpires,
+        updated,
+      ];
 }

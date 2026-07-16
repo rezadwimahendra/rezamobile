@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
 import '../bloc/auth_event.dart';
@@ -22,10 +23,15 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
   void initState() {
     super.initState();
     
+    // Hilangkan native splash screen begitu custom splash terpasang
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+
     // Konfigurasi Animasi Premium
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1400),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -88,88 +94,63 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFB800),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.white, Color(0xFFF7F9FC)],
+            colors: [Color(0xFFFFD54F), Color(0xFFFFB800)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Stack(
-          children: [
-            // Center Logo & Loader
-            Center(
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Menampilkan Logo Asli FitMotion (Membesar Bersih)
-                        Transform.scale(
-                          scale: _scaleAnimation.value,
-                          child: Image.asset(
-                            'assets/splash.png',
-                            width: 200, // Diperbesar sedikit agar tetap gagah
-                            height: 200,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(height: 54),
-                        
-                        // Loading Spinner Senada
-                        const SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFB300)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            
-            // Minimalist Footer
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return FadeTransition(
                 opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    Text(
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Loading Spinner Gelap Kontras
+                      const SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F172A)),
+                        ),
+                      ),
+                    const SizedBox(height: 36),
+                    
+                    // Brand Name
+                    const Text(
                       'FITMOTION',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 4.0,
-                        color: Colors.grey.shade800,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
-                      'V 1.0.0',
+                      'TRACK • TRAIN • TRANSFORM',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade400,
-                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF0F172A).withOpacity(0.7),
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 2.0,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
+               ),
+              );
+            },
+          ),
         ),
       ),
     );

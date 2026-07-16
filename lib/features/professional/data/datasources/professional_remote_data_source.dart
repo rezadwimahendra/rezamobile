@@ -106,12 +106,23 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
   @override
   Future<RecordModel> subscribeProfessional(String userId, String roleType) async {
     final Map<String, dynamic> body;
+    
     if (roleType == 'trainer') {
-      body = {'is_trainer': true};
+      body = {
+        'is_trainer': true,
+        'subscription_expires': null, // Permanen/Lifetime
+      };
     } else if (roleType == 'gym') {
-      body = {'is_gym': true};
+      body = {
+        'is_gym': true,
+        'subscription_expires': null, // Permanen/Lifetime
+      };
     } else {
-      body = {'role': 'pro'};
+      final expiryDate = DateTime.now().add(const Duration(days: 30)).toUtc().toIso8601String();
+      body = {
+        'role': 'pro',
+        'subscription_expires': expiryDate, // Hanya Pro yang dibatasi 30 hari
+      };
     }
     final result = await pb.collection('users').update(userId, body: body);
     pb.authStore.save(pb.authStore.token, result);

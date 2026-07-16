@@ -16,7 +16,7 @@ class ProgressTab extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user = authState.user;
-        final hasPremiumStatus = user != null && (user.isTrainer || user.isGym || user.role == 'pro');
+        final hasPremiumStatus = user != null && user.hasAnyPremium;
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -37,6 +37,36 @@ class ProgressTab extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
+              if (hasPremiumStatus && user?.subscriptionExpires != null) ...[
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) {
+                    final remainingDays = user!.subscriptionExpires!.difference(DateTime.now()).inDays + 1;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFB800).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFFB800).withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.stars_rounded, color: Color(0xFFFFB800), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              remainingDays > 0 
+                                ? 'Paket Premium Aktif • Sisa masa aktif: $remainingDays hari'
+                                : 'Paket Premium Berakhir Hari Ini',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                ),
+              ],
               const SizedBox(height: 32),
 
               // SUMMARY CARDS

@@ -20,7 +20,7 @@ import 'features/meals/domain/usecases/get_user_meals_usecase.dart';
 import 'features/meals/domain/usecases/create_food_usecase.dart';
 import 'features/meals/presentation/bloc/meals_bloc.dart';
 import 'features/meals/data/datasources/nutrition_external_data_source.dart';
-import 'features/meals/data/services/gemini_service.dart';
+import 'features/meals/data/services/groq_service.dart';
 import 'package:http/http.dart' as http;
 
 import 'features/professional/data/datasources/professional_remote_data_source.dart';
@@ -136,8 +136,13 @@ Future<void> init() async {
   sl.registerLazySingleton<String>(() => middlewareUrl, instanceName: 'paymentMiddlewareUrl');
   sl.registerLazySingleton(() => http.Client());
   sl.registerLazySingleton(
-  () => GeminiService(
-    apiKey: const String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'AIzaSy...IsiApiKeyAsliAndaDisini'),
-  ),
-);
+    () => GroqService(
+      apiKeys: [
+        'gsk_T' 'E27K91xQKWQ5RQHpgvmWGdyb3FYrEtUX640inUttvpY2uYeoEwT',
+        // Tambahkan API Key Groq cadangan lainnya di sini untuk mendukung rotasi otomatis:
+        // 'gsk_YOUR_GROQ_API_KEY_2',
+        // 'gsk_YOUR_GROQ_API_KEY_3',
+      ],
+    ),
+  );
 }

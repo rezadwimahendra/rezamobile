@@ -6,7 +6,7 @@ import '../bloc/meals_bloc.dart';
 import '../bloc/meals_event.dart';
 import '../bloc/meals_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../data/services/gemini_service.dart';
+import '../../data/services/groq_service.dart';
 
 class FoodSearchPage extends StatefulWidget {
   final String mealName;
@@ -84,8 +84,9 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
       setState(() => _isAIAnalyzing = true);
       
       try {
-        // Panggil servis Gemini untuk identifikasi makanan
-        final String? foodName = await sl<GeminiService>().identifyFood(photo);
+        // Panggil servis Groq untuk identifikasi makanan
+        final AIAnalysisResult? result = await sl<GroqService>().identifyFood(photo);
+        final String? foodName = result?.foodName;
         
         if (mounted) {
           setState(() => _isAIAnalyzing = false);

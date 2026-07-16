@@ -1,0 +1,1211 @@
+commit 479e7febb3208257f1ff900da08945286fc2ac42
+Author: rezadwimahendra <rezadwi319@gmail.com>
+Date:   Fri Jul 3 02:10:52 2026 +0700
+
+    Initial commit: FitMotion app with Admin Dashboard
+
+diff --git a/lib/features/home/presentation/pages/user_dashboard_page.dart b/lib/features/home/presentation/pages/user_dashboard_page.dart
+new file mode 100644
+index 0000000..f112a2e
+--- /dev/null
++++ b/lib/features/home/presentation/pages/user_dashboard_page.dart
+@@ -0,0 +1,357 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_bloc/flutter_bloc.dart';
++import 'package:pocketbase/pocketbase.dart';
++import 'package:image_picker/image_picker.dart';
++import '../../../meals/data/services/gemini_service.dart';
++import '../widgets/dashboard_tab.dart';
++import '../../../meals/presentation/widgets/diary_tab.dart';
++import '../../../meals/presentation/bloc/meals_bloc.dart';
++import '../../../meals/presentation/bloc/meals_state.dart';
++import '../../../meals/presentation/bloc/meals_event.dart';
++import '../../../professional/presentation/widgets/explore_tab.dart'; // Dikembalikan
++import '../../../meals/presentation/pages/food_search_page.dart';
++import '../../../meals/presentation/pages/ai_food_page.dart';
++import '../../../profile/presentation/pages/profile_page.dart';
++import './goal_edit_page.dart';
++import '../../../../injection.dart';
++import './notifications_page.dart';
++import '../../../auth/presentation/bloc/auth_bloc.dart';
++import '../../../auth/presentation/bloc/auth_state.dart';
++import '../bloc/weight_bloc.dart';
++import '../bloc/weight_bloc_state.dart';
++import './weight_log_page.dart';
++import './exercise_log_page.dart';
++import '../widgets/progress_tab.dart';
++import '../../../professional/presentation/pages/consultation_history_page.dart';
++// import '../../../community/presentation/pages/community_page.dart'; // Dihapus karena tidak terpakai
++
++class UserDashboardPage extends StatefulWidget {
++  final String userName;
++  final String userRole;
++
++  const UserDashboardPage({super.key, required this.userName, required this.userRole});
++
++  @override
++  State<UserDashboardPage> createState() => _UserDashboardPageState();
++}
++
++class _UserDashboardPageState extends State<UserDashboardPage> {
++  final ImagePicker _picker = ImagePicker();
++
++  @override
++  void initState() {
++    super.initState();
++    _loadData();
++  }
++
++  int _currentIndex = 0;
++  DateTime _selectedDate = DateTime.now(); // Baru
++
++  void _loadData() {
++    final userId = sl<PocketBase>().authStore.model?.id;
++    if (userId != null) {
++      context.read<MealsBloc>().add(UserMealsFetched(userId: userId, date: _selectedDate));
++      context.read<MealsBloc>().add(UserExercisesFetched(userId: userId, date: _selectedDate));
++      context.read<WeightBloc>().add(LatestWeightFetched(userId));
++    }
++  }
++
++  Future<void> _pickDate() async {
++    final DateTime? picked = await showDatePicker(
++      context: context,
++      initialDate: _selectedDate,
++      firstDate: DateTime(2020),
++      lastDate: DateTime.now(),
++      builder: (context, child) {
++        return Theme(
++          data: Theme.of(context).copyWith(
++            colorScheme: ColorScheme.light(
++              primary: const Color(0xFFFFB800),
++              onPrimary: Colors.black,
++              surface: Colors.white,
++              onSurface: Colors.black,
++            ),
++          ),
++          child: child!,
++        );
++      },
++    );
++    if (picked != null && picked != _selectedDate) {
++      setState(() {
++        _selectedDate = picked;
++      });
++      _loadData();
++    }
++  }
++
++  Future<void> _quickAICameraScan() async {
++    showModalBottomSheet(
++      context: context,
++      shape: const RoundedRectangleBorder(
++        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
++      ),
++      builder: (ctx) => Container(
++        padding: const EdgeInsets.symmetric(vertical: 20),
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            const Text('Foto Makanan dengan AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
++            const SizedBox(height: 20),
++            ListTile(
++              leading: const Icon(Icons.camera_alt, color: Colors.blue),
++              title: const Text('Ambil Foto Langsung (Kamera)'),
++              onTap: () {
++                Navigator.pop(ctx);
++                _processAIImage(ImageSource.camera);
++              },
++            ),
++            ListTile(
++              leading: const Icon(Icons.photo_library, color: Colors.green),
++              title: const Text('Pilih dari Galeri'),
++              onTap: () {
++                Navigator.pop(ctx);
++                _processAIImage(ImageSource.gallery);
++              },
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++
++  Future<void> _processAIImage(ImageSource source) async {
++    final XFile? photo = await _picker.pickImage(source: source);
++    if (photo == null) return;
++
++    // Tampilkan Loading Dialog
++    showDialog(
++      context: context,
++      barrierDismissible: false,
++      builder: (ctx) => const Center(
++        child: Card(
++          color: Colors.white,
++          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
++          child: Padding(
++            padding: EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
++            child: Column(
++              mainAxisSize: MainAxisSize.min,
++              children: [
++                CircularProgressIndicator(color: Color(0xFFFFB800)),
++                SizedBox(height: 16),
++                Text(
++                  'Mengidentifikasi makanan dengan AI...',
++                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
++                ),
++              ],
++            ),
++          ),
++        ),
++      ),
++    );
++
++    try {
++      final String? foodName = await sl<GeminiService>().identifyFood(photo);
++      
++      if (mounted) {
++        Navigator.pop(context); // Tutup loading dialog
++        
++        if (foodName != null && foodName.isNotEmpty) {
++          // Buka FoodSearchPage dengan initialQuery
++          Navigator.push(
++            context,
++            MaterialPageRoute(
++              builder: (_) => FoodSearchPage(
++                mealName: 'Sarapan',
++                initialQuery: foodName,
++              ),
++            ),
++          );
++        } else {
++          ScaffoldMessenger.of(context).showSnackBar(
++            const SnackBar(
++              content: Text('AI tidak dapat mengenali makanan tersebut. Silakan masukkan manual.'),
++              backgroundColor: Colors.redAccent,
++            ),
++          );
++        }
++      }
++    } catch (e) {
++      if (mounted) {
++        Navigator.pop(context); // Tutup loading dialog
++        ScaffoldMessenger.of(context).showSnackBar(
++          SnackBar(
++            content: Text('Gagal menganalisis foto: $e'),
++            backgroundColor: Colors.red,
++          ),
++        );
++      }
++    }
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    const primaryColor = Color(0xFFFFB800);
++
++    return BlocBuilder<AuthBloc, AuthState>(
++      builder: (context, authState) {
++        final authUser = authState.user;
++        final String currentUserName = authUser?.name ?? widget.userName;
++        final String initial = currentUserName.isNotEmpty ? currentUserName[0].toUpperCase() : 'U';
++        final pb = sl<PocketBase>();
++        final avatarUrl = (authUser?.avatar != null && authUser!.avatar!.isNotEmpty)
++            ? "${pb.baseUrl}/api/files/users/${authUser.id}/${authUser.avatar}?t=${authUser.avatar}"
++            : null;
++
++        final List<Widget> pages = [
++          // Index 0: Dasbor
++          BlocBuilder<MealsBloc, MealsState>(
++            builder: (context, mealsState) {
++              return BlocBuilder<WeightBloc, WeightState>(
++                builder: (context, weightState) {
++                  int totalCals = 0;
++                  int totalProtein = 0;
++                  int totalCarbs = 0;
++                  int totalFat = 0;
++
++                  for (var meal in mealsState.userMeals) {
++                    totalCals += meal.food.calories * meal.servings;
++                    totalProtein += meal.food.protein * meal.servings;
++                    totalCarbs += meal.food.carbs * meal.servings;
++                    totalFat += meal.food.fat * meal.servings;
++                  }
++                  final goalCals = authUser?.goalCalories ?? 0;
++                  double? currentWeight;
++                  if (weightState is WeightLoaded && weightState.latestWeight != null) {
++                    currentWeight = weightState.latestWeight?.weight;
++                  } else {
++                    currentWeight = authUser?.initialWeight;
++                  }
++                  final now = DateTime.now();
++                  final isToday = _selectedDate.day == now.day && _selectedDate.month == now.month && _selectedDate.year == now.year;
++                  final dateLabel = isToday ? 'Hari ini' : '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
++
++                  return DashboardTab(
++                    primaryColor: primaryColor,
++                    totalCalories: totalCals,
++                    goalCalories: goalCals,
++                    burnedCalories: mealsState.totalBurnedCalories,
++                    totalProtein: totalProtein,
++                    totalCarbs: totalCarbs,
++                    totalFat: totalFat,
++                    totalMinutes: mealsState.totalExerciseMinutes,
++                    totalDistance: mealsState.totalExerciseDistance,
++                    dateLabel: dateLabel,
++                    onDateTap: _pickDate,
++                    currentWeight: currentWeight,
++                    currentHeight: authUser?.height,
++                    onEditRequested: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GoalEditPage(currentGoal: goalCals))),
++                    onWeightLogRequested: () async {
++                      await Navigator.push(context, MaterialPageRoute(builder: (_) => WeightLogPage(currentWeight: currentWeight)));
++                      _loadData();
++                    },
++                    onExerciseLogRequested: () async {
++                      await Navigator.push(context, MaterialPageRoute(builder: (_) => const ExerciseLogPage()));
++                      _loadData();
++                    },
++                  );
++                },
++              );
++            },
++          ),
++          // Index 1: Buku Harian
++          DiaryTab(primaryColor: primaryColor),
++          // Index 2: Foto AI
++          AiFoodPage(primaryColor: primaryColor),
++          // Index 3: Kemajuan
++          ProgressTab(primaryColor: primaryColor),
++          // Index 4: Jelajah
++          const ExploreTab(),
++        ];
++
++        return Scaffold(
++          backgroundColor: Colors.white,
++          extendBody: false,
++          appBar: AppBar(
++            backgroundColor: const Color(0xFFFFFBE6),
++            elevation: 0,
++            leading: Padding(
++              padding: const EdgeInsets.all(8.0),
++              child: GestureDetector(
++                onTap: () {
++                  Navigator.push(
++                    context,
++                    MaterialPageRoute(
++                      builder: (_) => ProfilePage(
++                        userName: currentUserName,
++                        userRole: widget.userRole,
++                      ),
++                    ),
++                  );
++                },
++                child: CircleAvatar(
++                  backgroundColor: const Color(0xFFE91E63),
++                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
++                  child: avatarUrl == null
++                      ? Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
++                      : null,
++                ),
++              ),
++            ),
++            centerTitle: true,
++            title: const Text('FitMotion', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 24)),
++            actions: [
++              IconButton(
++                icon: const Icon(Icons.notifications_none, color: Colors.black),
++                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage())),
++              ),
++              IconButton(
++                icon: const Icon(Icons.chat_bubble_outline, color: Colors.black),
++                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsultationHistoryPage())),
++              ),
++            ],
++          ),
++          body: pages[_currentIndex],
++          bottomNavigationBar: BottomAppBar(
++            height: 70,
++            padding: const EdgeInsets.symmetric(horizontal: 4),
++            color: Colors.white,
++            elevation: 8,
++            child: Row(
++              mainAxisAlignment: MainAxisAlignment.spaceAround,
++              children: [
++                _buildTabItem(Icons.grid_view_sharp, 'Dasbor', 0),
++                _buildTabItem(Icons.menu_book, 'Harian', 1),
++                _buildTabItem(Icons.auto_awesome, 'Foto AI', 2),
++                _buildTabItem(Icons.bar_chart, 'Progres', 3),
++                _buildTabItem(Icons.explore_outlined, 'Jelajah', 4),
++              ],
++            ),
++          ),
++        );
++      },
++    );
++  }
++
++  Widget _buildTabItem(IconData icon, String label, int index) {
++    final isActive = _currentIndex == index;
++    return GestureDetector(
++      onTap: () {
++        setState(() => _currentIndex = index);
++        if (index == 0) {
++          _loadData(); // Pastikan Dasbor selalu ambil data hari ini
++        }
++      },
++      behavior: HitTestBehavior.opaque,
++      child: Container(
++        padding: const EdgeInsets.symmetric(horizontal: 10),
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            Icon(icon, color: isActive ? const Color(0xFFFFB800) : Colors.grey, size: 24),
++            Text(label, style: TextStyle(color: isActive ? const Color(0xFFFFB800) : Colors.grey, fontSize: 10)),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/features/meals/data/services/gemini_service.dart b/lib/features/meals/data/services/gemini_service.dart
+new file mode 100644
+index 0000000..d7fcdbc
+--- /dev/null
++++ b/lib/features/meals/data/services/gemini_service.dart
+@@ -0,0 +1,60 @@
++import 'dart:typed_data';
++import 'package:google_generative_ai/google_generative_ai.dart';
++import 'package:image_picker/image_picker.dart';
++
++class GeminiService {
++  final String apiKey;
++  late final GenerativeModel _model;
++
++  GeminiService({required this.apiKey}) {
++    _model = GenerativeModel(
++      model: 'gemini-2.5-flash',
++      apiKey: apiKey,
++      // Menambahkan safety settings agar AI tidak terlalu sensitif memblokir gambar makanan
++      safetySettings: [
++        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
++        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
++        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
++        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
++      ],
++    );
++  }
++
++  Future<String?> identifyFood(XFile image) async {
++    try {
++      final Uint8List imageBytes = await image.readAsBytes();
++      
++      final content = [
++        Content.multi([
++          DataPart('image/jpeg', imageBytes),
++          TextPart(
++            'Identify the food in this image. Answer with only the name of the food in Indonesian. '
++            'Example: "Nasi Goreng", "Ayam Bakar", "Sate Ayam". '
++            'If you see multiple items, pick the most prominent one. No punctuation, just the name.'
++          ),
++        ])
++      ];
++
++      print('DEBUG: Mengirim foto ke Gemini...');
++      final response = await _model.generateContent(content);
++      
++      if (response.text != null && response.text!.isNotEmpty) {
++        final result = response.text!.trim().replaceAll(RegExp(r'[^\w\s]'), '');
++        print('DEBUG: Gemini mendeteksi: $result');
++        return result;
++      }
++      
++      print('DEBUG: Gemini memberikan respon kosong.');
++      return null;
++    } catch (e) {
++      print('DEBUG: Gemini Error Detail: $e');
++      // Berikan error yang lebih spesifik ke UI
++      if (e.toString().contains('403')) {
++        throw 'API Key belum diaktifkan atau tidak memiliki izin (Error 403). Pastikan Generative Language API sudah ENABLE di Google Cloud.';
++      } else if (e.toString().contains('429')) {
++        throw 'Terlalu banyak permintaan (Kuota habis). Coba lagi nanti.';
++      }
++      throw 'Gagal menghubungi AI: $e';
++    }
++  }
++}
+diff --git a/lib/features/meals/presentation/pages/ai_food_page.dart b/lib/features/meals/presentation/pages/ai_food_page.dart
+new file mode 100644
+index 0000000..4aecc06
+--- /dev/null
++++ b/lib/features/meals/presentation/pages/ai_food_page.dart
+@@ -0,0 +1,264 @@
++import 'dart:io';
++import 'package:flutter/material.dart';
++import 'package:image_picker/image_picker.dart';
++import '../../../../injection.dart';
++import '../../data/services/gemini_service.dart';
++import 'food_search_page.dart';
++
++class AiFoodPage extends StatefulWidget {
++  final Color primaryColor;
++  const AiFoodPage({super.key, required this.primaryColor});
++
++  @override
++  State<AiFoodPage> createState() => _AiFoodPageState();
++}
++
++class _AiFoodPageState extends State<AiFoodPage> {
++  final ImagePicker _picker = ImagePicker();
++  File? _imageFile;
++  bool _isAnalyzing = false;
++  String? _detectedFood;
++
++  Future<void> _pickImage(ImageSource source) async {
++    try {
++      final XFile? pickedFile = await _picker.pickImage(
++        source: source,
++        maxWidth: 1024,
++        maxHeight: 1024,
++        imageQuality: 85,
++      );
++      if (pickedFile != null) {
++        setState(() {
++          _imageFile = File(pickedFile.path);
++          _detectedFood = null; // Reset hasil sebelumnya
++        });
++      }
++    } catch (e) {
++      ScaffoldMessenger.of(context).showSnackBar(
++        SnackBar(content: Text('Gagal mengambil gambar: $e'), backgroundColor: Colors.red),
++      );
++    }
++  }
++
++  Future<void> _analyzeImage() async {
++    if (_imageFile == null) return;
++
++    setState(() {
++      _isAnalyzing = true;
++      _detectedFood = null;
++    });
++
++    try {
++      final XFile xFile = XFile(_imageFile!.path);
++      final String? foodName = await sl<GeminiService>().identifyFood(xFile);
++
++      setState(() {
++        _isAnalyzing = false;
++        if (foodName != null && foodName.isNotEmpty) {
++          _detectedFood = foodName;
++        } else {
++          _detectedFood = "Makanan tidak dikenali";
++        }
++      });
++    } catch (e) {
++      setState(() {
++        _isAnalyzing = false;
++      });
++      ScaffoldMessenger.of(context).showSnackBar(
++        SnackBar(content: Text('Error Analisis: $e'), backgroundColor: Colors.red),
++      );
++    }
++  }
++
++  void _navigateToSearch() {
++    if (_detectedFood == null || _detectedFood == "Makanan tidak dikenali") return;
++    Navigator.push(
++      context,
++      MaterialPageRoute(
++        builder: (_) => FoodSearchPage(
++          mealName: 'Sarapan',
++          initialQuery: _detectedFood,
++        ),
++      ),
++    );
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Container(
++      color: Colors.white,
++      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
++      child: Column(
++        crossAxisAlignment: CrossAxisAlignment.stretch,
++        children: [
++          // Header Tab
++          const Column(
++            children: [
++              Text(
++                'AI Food Describer',
++                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
++              ),
++              SizedBox(height: 6),
++              Text(
++                'Foto makanan Anda, biar AI yang menebak dan mencatat nutrisinya!',
++                textAlign: TextAlign.center,
++                style: TextStyle(fontSize: 13, color: Colors.grey),
++              ),
++            ],
++          ),
++          const SizedBox(height: 24),
++
++          // Area Gambar / Placeholder
++          Expanded(
++            child: Container(
++              decoration: BoxDecoration(
++                color: Colors.grey.shade50,
++                borderRadius: BorderRadius.circular(24),
++                border: Border.all(color: Colors.grey.shade200, width: 1.5),
++              ),
++              clipBehavior: Clip.antiAlias,
++              child: _imageFile != null
++                  ? Stack(
++                      fit: StackFit.expand,
++                      children: [
++                        Image.file(_imageFile!, fit: BoxFit.cover),
++                        if (_isAnalyzing)
++                          Container(
++                            color: Colors.black.withOpacity(0.5),
++                            child: const Center(
++                              child: Column(
++                                mainAxisSize: MainAxisSize.min,
++                                children: [
++                                  CircularProgressIndicator(color: Color(0xFFFFB800)),
++                                  SizedBox(height: 20),
++                                  Text(
++                                    'Gemini sedang menganalisis...',
++                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
++                                  ),
++                                ],
++                              ),
++                            ),
++                          ),
++                      ],
++                    )
++                  : Center(
++                      child: Padding(
++                        padding: const EdgeInsets.all(32.0),
++                        child: Column(
++                          mainAxisAlignment: MainAxisAlignment.center,
++                          children: [
++                            Container(
++                              padding: const EdgeInsets.all(20),
++                              decoration: BoxDecoration(
++                                color: const Color(0xFFFFFBE6),
++                                shape: BoxShape.circle,
++                              ),
++                              child: Icon(Icons.auto_awesome, color: widget.primaryColor, size: 48),
++                            ),
++                            const SizedBox(height: 20),
++                            const Text(
++                              'Belum ada foto yang dipilih',
++                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
++                            ),
++                            const SizedBox(height: 8),
++                            const Text(
++                              'Silakan ambil foto piring makanan Anda atau pilih dari galeri HP.',
++                              textAlign: TextAlign.center,
++                              style: TextStyle(fontSize: 12, color: Colors.grey),
++                            ),
++                          ],
++                        ),
++                      ),
++                    ),
++            ),
++          ),
++          const SizedBox(height: 24),
++
++          // Jika ada hasil deteksi AI
++          if (_detectedFood != null) ...[
++            Container(
++              padding: const EdgeInsets.all(16),
++              decoration: BoxDecoration(
++                color: const Color(0xFFFFFBE6),
++                borderRadius: BorderRadius.circular(16),
++                border: Border.all(color: widget.primaryColor.withOpacity(0.3)),
++              ),
++              child: Column(
++                children: [
++                  const Text('Hasil Analisis AI:', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
++                  const SizedBox(height: 4),
++                  Text(
++                    _detectedFood!,
++                    textAlign: TextAlign.center,
++                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: widget.primaryColor),
++                  ),
++                  const SizedBox(height: 12),
++                  if (_detectedFood != "Makanan tidak dikenali")
++                    ElevatedButton.icon(
++                      onPressed: _navigateToSearch,
++                      icon: const Icon(Icons.search, color: Colors.black, size: 18),
++                      label: const Text('Cari & Tambah Nutrisi', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
++                      style: ElevatedButton.styleFrom(
++                        backgroundColor: widget.primaryColor,
++                        elevation: 0,
++                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
++                      ),
++                    ),
++                ],
++              ),
++            ),
++            const SizedBox(height: 20),
++          ],
++
++          // Tombol Pilihan Aksi
++          if (!_isAnalyzing)
++            Row(
++              children: [
++                Expanded(
++                  child: OutlinedButton.icon(
++                    onPressed: () => _pickImage(ImageSource.gallery),
++                    icon: const Icon(Icons.photo_library, size: 18, color: Colors.black87),
++                    label: const Text('Galeri', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
++                    style: OutlinedButton.styleFrom(
++                      padding: const EdgeInsets.symmetric(vertical: 16),
++                      side: BorderSide(color: Colors.grey.shade300),
++                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
++                    ),
++                  ),
++                ),
++                const SizedBox(width: 12),
++                Expanded(
++                  child: ElevatedButton.icon(
++                    onPressed: () => _pickImage(ImageSource.camera),
++                    icon: const Icon(Icons.camera_alt, size: 18, color: Colors.black),
++                    label: const Text('Kamera', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
++                    style: ElevatedButton.styleFrom(
++                      backgroundColor: widget.primaryColor,
++                      padding: const EdgeInsets.symmetric(vertical: 16),
++                      elevation: 0,
++                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
++                    ),
++                  ),
++                ),
++              ],
++            ),
++          
++          if (_imageFile != null && !_isAnalyzing && _detectedFood == null) ...[
++            const SizedBox(height: 12),
++            ElevatedButton(
++              onPressed: _analyzeImage,
++              style: ElevatedButton.styleFrom(
++                backgroundColor: Colors.blueAccent,
++                foregroundColor: Colors.white,
++                padding: const EdgeInsets.symmetric(vertical: 18),
++                elevation: 0,
++                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
++              ),
++              child: const Text('Mulai Analisis AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
++            ),
++          ],
++        ],
++      ),
++    );
++  }
++}
+diff --git a/lib/features/meals/presentation/pages/food_search_page.dart b/lib/features/meals/presentation/pages/food_search_page.dart
+new file mode 100644
+index 0000000..cef7deb
+--- /dev/null
++++ b/lib/features/meals/presentation/pages/food_search_page.dart
+@@ -0,0 +1,365 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_bloc/flutter_bloc.dart';
++import 'package:image_picker/image_picker.dart';
++import '../../../../injection.dart';
++import '../bloc/meals_bloc.dart';
++import '../bloc/meals_event.dart';
++import '../bloc/meals_state.dart';
++import '../../../auth/presentation/bloc/auth_bloc.dart';
++import '../../data/services/gemini_service.dart';
++
++class FoodSearchPage extends StatefulWidget {
++  final String mealName;
++  final DateTime? selectedDate;
++  final String? initialQuery; // Baru
++
++  const FoodSearchPage({super.key, required this.mealName, this.selectedDate, this.initialQuery});
++
++  @override
++  State<FoodSearchPage> createState() => _FoodSearchPageState();
++}
++
++class _FoodSearchPageState extends State<FoodSearchPage> {
++  final _searchController = TextEditingController();
++  final ImagePicker _picker = ImagePicker();
++  bool _isAIAnalyzing = false;
++
++  @override
++  void initState() {
++    super.initState();
++    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
++      _searchController.text = widget.initialQuery!;
++      context.read<MealsBloc>().add(FoodsFetched(query: widget.initialQuery));
++    } else {
++      context.read<MealsBloc>().add(const FoodsFetched());
++    }
++  }
++
++  @override
++  void dispose() {
++    _searchController.dispose();
++    super.dispose();
++  }
++
++  // Method untuk memilih sumber gambar (Kamera atau Galeri)
++  Future<void> _pickImageAndAnalyze() async {
++    showModalBottomSheet(
++      context: context,
++      shape: const RoundedRectangleBorder(
++        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
++      ),
++      builder: (ctx) => Container(
++        padding: const EdgeInsets.symmetric(vertical: 20),
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            const Text('Pilih Foto Makanan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
++            const SizedBox(height: 20),
++            ListTile(
++              leading: const Icon(Icons.camera_alt, color: Colors.blue),
++              title: const Text('Ambil Foto Langsung'),
++              onTap: () {
++                Navigator.pop(ctx);
++                _processImage(ImageSource.camera);
++              },
++            ),
++            ListTile(
++              leading: const Icon(Icons.photo_library, color: Colors.green),
++              title: const Text('Pilih dari Galeri'),
++              onTap: () {
++                Navigator.pop(ctx);
++                _processImage(ImageSource.gallery);
++              },
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++
++  Future<void> _processImage(ImageSource source) async {
++    final XFile? photo = await _picker.pickImage(source: source);
++    
++    if (photo != null) {
++      setState(() => _isAIAnalyzing = true);
++      
++      try {
++        // Panggil servis Gemini untuk identifikasi makanan
++        final String? foodName = await sl<GeminiService>().identifyFood(photo);
++        
++        if (mounted) {
++          setState(() => _isAIAnalyzing = false);
++          
++          if (foodName != null && foodName.isNotEmpty) {
++            // Tampilkan hasil tebakan di kolom pencarian
++            _searchController.text = foodName;
++            // Jalankan pencarian nutrisi secara otomatis
++            context.read<MealsBloc>().add(FoodsFetched(query: foodName));
++            
++            ScaffoldMessenger.of(context).showSnackBar(
++              SnackBar(
++                content: Text('AI mendeteksi: $foodName'),
++                backgroundColor: Colors.green,
++                duration: const Duration(seconds: 3),
++              ),
++            );
++          } else {
++            ScaffoldMessenger.of(context).showSnackBar(
++              const SnackBar(content: Text('AI tidak dapat mengenali makanan tersebut. Coba foto lebih jelas.')),
++            );
++          }
++        }
++      } catch (e) {
++        if (mounted) {
++          setState(() => _isAIAnalyzing = false);
++          ScaffoldMessenger.of(context).showSnackBar(
++            SnackBar(
++              content: Text('Error AI: Pastikan API Key valid & koneksi stabil ($e)'), 
++              backgroundColor: Colors.red
++            ),
++          );
++        }
++      }
++    }
++  }
++
++  Future<void> _showAddFoodDialog() async {
++    final nameCtrl = TextEditingController();
++    final calCtrl = TextEditingController();
++    final carbCtrl = TextEditingController();
++    final proteinCtrl = TextEditingController();
++
++    await showDialog(
++      context: context,
++      builder: (ctx) {
++        return StatefulBuilder(
++          builder: (context, setStateDialog) {
++            final isFormValid = nameCtrl.text.isNotEmpty && calCtrl.text.isNotEmpty;
++            
++            return AlertDialog(
++              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
++              title: const Text('Buat Makanan Baru', style: TextStyle(fontWeight: FontWeight.bold)),
++              content: SingleChildScrollView(
++                child: Column(
++                  mainAxisSize: MainAxisSize.min,
++                  children: [
++                    TextField(
++                      controller: nameCtrl, 
++                      decoration: const InputDecoration(labelText: 'Nama Makanan'),
++                      onChanged: (_) => setStateDialog(() {}),
++                    ),
++                    TextField(
++                      controller: calCtrl, 
++                      decoration: const InputDecoration(labelText: 'Kalori (kal)'), 
++                      keyboardType: TextInputType.number,
++                      onChanged: (_) => setStateDialog(() {}),
++                    ),
++                    TextField(controller: carbCtrl, decoration: const InputDecoration(labelText: 'Karbohidrat (g)'), keyboardType: TextInputType.number),
++                    TextField(controller: proteinCtrl, decoration: const InputDecoration(labelText: 'Protein (g)'), keyboardType: TextInputType.number),
++                  ],
++                ),
++              ),
++              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
++              actions: [
++                SizedBox(
++                  width: double.infinity,
++                  child: ElevatedButton(
++                    onPressed: isFormValid ? () {
++                      context.read<MealsBloc>().add(FoodCreated(
++                        name: nameCtrl.text,
++                        calories: int.tryParse(calCtrl.text) ?? 0,
++                        carbs: int.tryParse(carbCtrl.text) ?? 0,
++                        protein: int.tryParse(proteinCtrl.text) ?? 0,
++                        fat: 0,
++                      ));
++                      Navigator.pop(ctx);
++                    } : null,
++                    style: ElevatedButton.styleFrom(
++                      backgroundColor: Theme.of(context).primaryColor,
++                      disabledBackgroundColor: Colors.grey.shade300,
++                      foregroundColor: Colors.black,
++                      padding: const EdgeInsets.symmetric(vertical: 14),
++                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
++                    ),
++                    child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
++                  ),
++                ),
++              ],
++            );
++          },
++        );
++      }
++    );
++  }
++
++  Widget _buildFoodItem(dynamic food) {
++    final primaryColor = Theme.of(context).primaryColor;
++    
++    return Column(
++      children: [
++        ListTile(
++          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
++          title: Text(food.name.isNotEmpty ? food.name : 'Makanan Tanpa Nama', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
++          subtitle: Text('Protein: ${food.protein} g | Karbo: ${food.carbs} g', style: const TextStyle(color: Colors.grey, fontSize: 13)),
++          trailing: Row(
++            mainAxisSize: MainAxisSize.min,
++            children: [
++              Text('${food.calories} kal', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
++              const SizedBox(width: 8),
++              IconButton(
++                icon: Icon(Icons.add_circle, color: primaryColor, size: 28),
++                onPressed: () {
++                  final userId = sl<AuthBloc>().state.user?.id;
++                  if (userId != null) {
++                    context.read<MealsBloc>().add(MealAdded(
++                      userId: userId,
++                      food: food,
++                      mealType: widget.mealName.toLowerCase(),
++                      servings: 1,
++                      date: widget.selectedDate ?? DateTime.now(),
++                    ));
++                  } else {
++                    ScaffoldMessenger.of(context).showSnackBar(
++                      const SnackBar(content: Text('Sesi telah berakhir, silakan login kembali'), backgroundColor: Colors.red),
++                    );
++                  }
++                },
++              ),
++            ],
++          ),
++          onTap: () {
++            // Kita biarkan onTap kosong atau samakan dengan tombol agar seluruh baris bisa ditekan
++            final userId = sl<AuthBloc>().state.user?.id;
++            if (userId != null) {
++              context.read<MealsBloc>().add(MealAdded(
++                userId: userId,
++                food: food,
++                mealType: widget.mealName.toLowerCase(),
++                servings: 1,
++                date: widget.selectedDate ?? DateTime.now(),
++              ));
++            }
++          },
++        ),
++        const Divider(height: 1, indent: 24, endIndent: 24),
++      ],
++    );
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    final primaryColor = Theme.of(context).primaryColor;
++
++    return Scaffold(
++      backgroundColor: Colors.white,
++      appBar: AppBar(
++        backgroundColor: Colors.white,
++        elevation: 0,
++        centerTitle: true,
++        leading: IconButton(
++          icon: const Icon(Icons.arrow_back, color: Colors.black87),
++          onPressed: () => Navigator.of(context).pop(),
++        ),
++        title: Text(
++          widget.mealName,
++          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
++        ),
++      ),
++      body: Column(
++        children: [
++          if (_isAIAnalyzing)
++            const LinearProgressIndicator(minHeight: 3, color: Colors.blue),
++            
++          Padding(
++            padding: const EdgeInsets.all(24.0),
++            child: TextField(
++              controller: _searchController,
++              onChanged: (val) {
++                context.read<MealsBloc>().add(FoodsFetched(query: val));
++              },
++              decoration: InputDecoration(
++                filled: true,
++                fillColor: Colors.grey.shade100,
++                hintText: 'Cari makanan...',
++                hintStyle: TextStyle(color: Colors.grey.shade500),
++                prefixIcon: const Icon(Icons.search, color: Colors.grey),
++                suffixIcon: Padding(
++                  padding: const EdgeInsets.only(right: 8.0),
++                  child: IconButton(
++                    icon: const Icon(Icons.camera_alt, color: Colors.grey, size: 20),
++                    tooltip: 'Foto AI',
++                    onPressed: _pickImageAndAnalyze,
++                  ),
++                ),
++                border: OutlineInputBorder(
++                  borderRadius: BorderRadius.circular(15),
++                  borderSide: BorderSide.none,
++                ),
++                contentPadding: const EdgeInsets.symmetric(vertical: 16),
++              ),
++            ),
++          ),
++          Expanded(
++            child: BlocListener<MealsBloc, MealsState>(
++              listener: (context, state) {
++                if (state.status == MealsStatus.success) {
++                  ScaffoldMessenger.of(context).showSnackBar(
++                    const SnackBar(content: Text('Makanan berhasil ditambahkan!'), backgroundColor: Colors.green),
++                  );
++                  Navigator.pop(context);
++                } else if (state.status == MealsStatus.error) {
++                  ScaffoldMessenger.of(context).showSnackBar(
++                    SnackBar(content: Text('Gagal: ${state.errorMessage}'), backgroundColor: Colors.red),
++                  );
++                }
++              },
++              child: BlocBuilder<MealsBloc, MealsState>(
++                builder: (context, state) {
++                  if (state.status == MealsStatus.loading) {
++                    return const Center(child: CircularProgressIndicator());
++                  }
++                  if (state.foods.isEmpty) {
++                    return Center(
++                      child: Padding(
++                        padding: const EdgeInsets.all(32.0),
++                        child: Column(
++                          mainAxisAlignment: MainAxisAlignment.center,
++                          children: [
++                            Icon(Icons.search_off_outlined, size: 64, color: Colors.grey.shade300),
++                            const SizedBox(height: 16),
++                            Text(
++                              'Makanan tidak ditemukan',
++                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
++                            ),
++                            const SizedBox(height: 8),
++                            Text(
++                              'Coba ketik nama lain atau gunakan Foto AI di atas.',
++                              textAlign: TextAlign.center,
++                              style: TextStyle(color: Colors.grey.shade500),
++                            )
++                          ],
++                        ),
++                      ),
++                    );
++                  }
++                  return ListView.builder(
++                    itemCount: state.foods.length,
++                    itemBuilder: (context, index) {
++                      return _buildFoodItem(state.foods[index]);
++                    },
++                  );
++                },
++              ),
++            ),
++          ),
++        ],
++      ),
++      floatingActionButton: FloatingActionButton.extended(
++        onPressed: _showAddFoodDialog,
++        backgroundColor: primaryColor,
++        icon: const Icon(Icons.add, color: Colors.black),
++        label: const Text('Buat Makanan', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
++      ),
++    );
++  }
++}
+diff --git a/lib/injection.dart b/lib/injection.dart
+new file mode 100644
+index 0000000..79fa89b
+--- /dev/null
++++ b/lib/injection.dart
+@@ -0,0 +1,129 @@
++import 'package:get_it/get_it.dart';
++import 'package:pocketbase/pocketbase.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:flutter/foundation.dart';
++
++import 'features/auth/data/datasources/auth_remote_data_source.dart';
++import 'features/auth/data/repositories/auth_repository_impl.dart';
++import 'features/auth/domain/repositories/auth_repository.dart';
++import 'features/auth/domain/usecases/login_usecase.dart';
++import 'features/auth/domain/usecases/register_usecase.dart';
++import 'features/auth/domain/usecases/logout_usecase.dart';
++import 'features/auth/presentation/bloc/auth_bloc.dart';
++import 'features/home/presentation/bloc/steps_bloc.dart'; // Baru
++
++import 'features/meals/data/datasources/meals_remote_data_source.dart';
++import 'features/meals/data/repositories/meals_repository_impl.dart';
++import 'features/meals/domain/repositories/meals_repository.dart';
++import 'features/meals/domain/usecases/get_foods_usecase.dart';
++import 'features/meals/domain/usecases/add_meal_usecase.dart';
++import 'features/meals/domain/usecases/get_user_meals_usecase.dart';
++import 'features/meals/domain/usecases/create_food_usecase.dart';
++import 'features/meals/presentation/bloc/meals_bloc.dart';
++import 'features/meals/data/datasources/nutrition_external_data_source.dart';
++import 'features/meals/data/services/gemini_service.dart';
++import 'package:http/http.dart' as http;
++
++import 'features/professional/data/datasources/professional_remote_data_source.dart';
++import 'features/professional/data/repositories/professional_repository_impl.dart';
++import 'features/professional/domain/repositories/professional_repository.dart';
++import 'features/professional/domain/usecases/get_all_gyms_usecase.dart';
++import 'features/professional/domain/usecases/get_all_trainers_usecase.dart';
++import 'features/professional/domain/usecases/get_professional_data_usecase.dart';
++import 'features/professional/domain/usecases/register_professional_usecase.dart';
++import 'features/professional/domain/usecases/subscribe_professional_usecase.dart';
++import 'features/professional/presentation/bloc/professional_bloc.dart';
++import 'features/home/presentation/bloc/weight_bloc.dart';
++
++final sl = GetIt.instance;
++
++Future<void> init() async {
++  // Features - Auth
++  // Bloc
++  sl.registerLazySingleton(
++    () => AuthBloc(
++      loginUseCase: sl(),
++      registerUseCase: sl(),
++      logoutUseCase: sl(),
++      pb: sl(),
++    ),
++  );
++
++  sl.registerLazySingleton(
++    () => MealsBloc(
++      getFoodsUseCase: sl(),
++      getUserMealsUseCase: sl(),
++      addMealUseCase: sl(),
++      createFoodUseCase: sl(),
++    ),
++  );
++
++  sl.registerLazySingleton(
++    () => ProfessionalBloc(
++      getProfessionalDataUseCase: sl(),
++      registerProfessionalUseCase: sl(),
++      subscribeProfessionalUseCase: sl(),
++      getAllTrainersUseCase: sl(),
++      getAllGymsUseCase: sl(),
++    ),
++  );
++
++  sl.registerLazySingleton(() => WeightBloc(pb: sl()));
++  sl.registerLazySingleton(() => StepsBloc()); // Baru
++
++  // Use cases
++  sl.registerLazySingleton(() => LoginUseCase(sl()));
++  sl.registerLazySingleton(() => RegisterUseCase(sl()));
++  sl.registerLazySingleton(() => LogoutUseCase(sl()));
++  sl.registerLazySingleton(() => GetFoodsUseCase(sl()));
++  sl.registerLazySingleton(() => GetUserMealsUseCase(sl()));
++  sl.registerLazySingleton(() => AddMealUseCase(sl()));
++  sl.registerLazySingleton(() => CreateFoodUseCase(sl()));
++  sl.registerLazySingleton(() => GetProfessionalDataUseCase(sl()));
++  sl.registerLazySingleton(() => RegisterProfessionalUseCase(sl()));
++  sl.registerLazySingleton(() => SubscribeProfessionalUseCase(sl()));
++  sl.registerLazySingleton(() => GetAllTrainersUseCase(repository: sl()));
++  sl.registerLazySingleton(() => GetAllGymsUseCase(sl()));
++
++  // Repository
++  sl.registerLazySingleton<AuthRepository>(
++    () => AuthRepositoryImpl(remoteDataSource: sl()),
++  );
++  sl.registerLazySingleton<MealsRepository>(
++    () => MealsRepositoryImpl(remoteDataSource: sl(), externalDataSource: sl()),
++  );
++  sl.registerLazySingleton<ProfessionalRepository>(
++    () => ProfessionalRepositoryImpl(remoteDataSource: sl()),
++  );
++
++  // Data sources
++  sl.registerLazySingleton<AuthRemoteDataSource>(
++    () => AuthRemoteDataSourceImpl(pb: sl()),
++  );
++  sl.registerLazySingleton<MealsRemoteDataSource>(
++    () => MealsRemoteDataSourceImpl(pb: sl()),
++  );
++  sl.registerLazySingleton<ProfessionalRemoteDataSource>(
++    () => ProfessionalRemoteDataSourceImpl(pb: sl()),
++  );
++  sl.registerLazySingleton(() => NutritionExternalDataSource(client: sl()));
++
++  //! External
++  final sharedPreferences = await SharedPreferences.getInstance();
++  sl.registerLazySingleton(() => sharedPreferences);
++
++  final store = AsyncAuthStore(
++    save: (String data) async => sharedPreferences.setString('pb_auth', data),
++    initial: sharedPreferences.getString('pb_auth'),
++    clear: () async => sharedPreferences.remove('pb_auth'),
++  );
++
++  final url = kIsWeb ? 'http://127.0.0.1:8090' : 'http://10.249.128.252:8090';
++  sl.registerLazySingleton(() => PocketBase(url, authStore: store));
++  sl.registerLazySingleton(() => http.Client());
++  sl.registerLazySingleton(
++    () => GeminiService(
++      apiKey: const String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'PLACEHOLDER_GEMINI_KEY'),
++    ),
++  );
++}

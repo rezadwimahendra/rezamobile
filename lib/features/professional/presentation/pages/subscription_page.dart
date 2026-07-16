@@ -117,30 +117,6 @@ class SubscriptionPage extends StatelessWidget {
         );
         
         bool isSuccess = paymentResult == true;
-        
-        if (!isSuccess && context.mounted) {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF1E1E1E),
-              title: const Text('Konfirmasi Pembayaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              content: const Text('Apakah Anda sudah berhasil menyelesaikan pembayaran di Midtrans?', style: TextStyle(color: Colors.white70)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Belum', style: TextStyle(color: Colors.grey)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Sudah Sukses', style: TextStyle(color: Color(0xFFFFB800), fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          );
-          if (confirm == true) {
-            isSuccess = true;
-          }
-        }
 
         if (isSuccess && context.mounted) {
           context.read<ProfessionalBloc>().add(ProfessionalSubscribed(userId: user.id, roleType: roleType));
@@ -265,8 +241,16 @@ class SubscriptionPage extends StatelessWidget {
                               const Text('Rp', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
                               const SizedBox(width: 4),
                               Text(priceText, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white)),
-                              const Text(' /bln', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                              Text(isPro ? ' /bln' : ' (Sekali Bayar)', style: const TextStyle(color: Colors.white38, fontSize: 12)),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isPro 
+                                ? 'Paket aktif selama 30 hari sejak sukses pembayaran'
+                                : 'Kemitraan aktif selamanya (Permanen)',
+                            style: const TextStyle(color: Color(0xFFFFB800), fontSize: 10, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
                           const Divider(color: Colors.white10),
@@ -307,9 +291,11 @@ class SubscriptionPage extends StatelessWidget {
                           },
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Aman via Midtrans Gateway • Batalkan Kapan Saja',
-                          style: TextStyle(color: Colors.white24, fontSize: 9),
+                        Text(
+                          isPro
+                              ? 'Aman via Midtrans Gateway • Masa Aktif 30 Hari'
+                              : 'Aman via Midtrans Gateway • Akses Permanen / Lifetime',
+                          style: const TextStyle(color: Colors.white24, fontSize: 9),
                         ),
                       ],
                     ),
