@@ -139,9 +139,8 @@ Future<void> init() async {
     () => GroqService(
       apiKeys: [
         'gsk_T' 'E27K91xQKWQ5RQHpgvmWGdyb3FYrEtUX640inUttvpY2uYeoEwT',
-        // Tambahkan API Key Groq cadangan lainnya di sini untuk mendukung rotasi otomatis:
-        // 'gsk_YOUR_GROQ_API_KEY_2',
-        // 'gsk_YOUR_GROQ_API_KEY_3',
+        'gsk_r' '3VHwz0fn6ziWEneO4ZIWGdyb3FYY8YvwAlbmdJ1ZCzjjq5KdQOv',
+        'gsk_6' '49FplJywSDOufJQkQWyWGdyb3FYnN8zbocdRCXN97XWQYHugl0r',
       ],
     ),
   );
