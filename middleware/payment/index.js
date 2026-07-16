@@ -12,7 +12,7 @@ try {
                 const key = parts[0].trim();
                 const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
                 if (key) {
-                    process.env[key] = value;
+                    process.env[key] = process.env[key] || value;
                 }
             }
         });
@@ -36,10 +36,22 @@ app.use(bodyParser.json());
  * 1. KONFIGURASI MIDTRANS
  * Ambil Server Key & Client Key dari Dashboard Midtrans Settings -> Access Keys
  */
+const isProd = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+const sKey = process.env.MIDTRANS_SERVER_KEY || '';
+const cKey = process.env.MIDTRANS_CLIENT_KEY || '';
+
+console.log('=== LOG DIAGNOSIS MIDTRANS ===');
+console.log('Mode Production (isProduction):', isProd);
+console.log('Nilai MIDTRANS_IS_PRODUCTION:', process.env.MIDTRANS_IS_PRODUCTION);
+console.log('Panjang Server Key:', sKey.length);
+console.log('Karakter Awal Server Key:', sKey.substring(0, 11));
+console.log('Karakter Awal Client Key:', cKey.substring(0, 11));
+console.log('=============================');
+
 let snap = new midtransClient.Snap({
-    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true', // true jika di production
-    serverKey: process.env.MIDTRANS_SERVER_KEY || 'Mid-server-PLACEHOLDER', // Gunakan environment variable dari .env
-    clientKey: process.env.MIDTRANS_CLIENT_KEY || 'Mid-client-PLACEHOLDER'  // Gunakan environment variable dari .env
+    isProduction: isProd,
+    serverKey: sKey || 'Mid-server-PLACEHOLDER',
+    clientKey: cKey || 'Mid-client-PLACEHOLDER'
 });
 
 /**
