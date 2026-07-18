@@ -119,7 +119,6 @@ class _HeightLogPageState extends State<HeightLogPage> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900),
-              cursorColor: primaryColor,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -133,7 +132,7 @@ class _HeightLogPageState extends State<HeightLogPage> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),

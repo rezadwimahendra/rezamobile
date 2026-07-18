@@ -21,13 +21,14 @@ class ProfessionalState extends Equatable {
   ProfessionalState copyWith({
     ProfessionalStatus? status,
     ProfessionalEntity? professional,
+    bool clearProfessional = false,
     List<ProfessionalEntity>? trainers,
     List<ProfessionalEntity>? gyms,
     String? errorMessage,
   }) {
     return ProfessionalState(
       status: status ?? this.status,
-      professional: professional ?? this.professional,
+      professional: clearProfessional ? null : (professional ?? this.professional),
       trainers: trainers ?? this.trainers,
       gyms: gyms ?? this.gyms,
       errorMessage: errorMessage ?? this.errorMessage,

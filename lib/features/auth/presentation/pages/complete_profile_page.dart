@@ -239,7 +239,6 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
               : TextInputType.text,
           validator: (value) => value == null || value.isEmpty ? 'Harap diisi' : null,
           style: const TextStyle(fontWeight: FontWeight.bold),
-          cursorColor: primaryColor,
           selectionControls: MaterialTextSelectionControls(),
           decoration: InputDecoration(
             filled: true,
@@ -260,7 +259,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: primaryColor, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),

@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'dart:js' as js;
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MapWebViewPage extends StatefulWidget {
   final double latitude;
@@ -20,115 +20,203 @@ class MapWebViewPage extends StatefulWidget {
 }
 
 class _MapWebViewPageState extends State<MapWebViewPage> {
-  late final WebViewController? _controller;
-  bool _isLoading = true;
-  late final String _url;
+  final MapController _mapController = MapController();
+  late LatLng _gymLocation;
 
   @override
   void initState() {
     super.initState();
-    _url = "https://www.openstreetmap.org/?mlat=${widget.latitude}&mlon=${widget.longitude}#map=16/${widget.latitude}/${widget.longitude}";
-    
-    // Inisialisasi controller hanya jika bukan web (karena webview_flutter tidak didukung di web)
-    if (!kIsWeb) {
-      try {
-        _controller = WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onPageStarted: (String url) {
-                setState(() => _isLoading = true);
-              },
-              onPageFinished: (String url) {
-                setState(() => _isLoading = false);
-              },
-            ),
-          )
-          ..loadRequest(Uri.parse(_url));
-      } catch (e) {
-        _controller = null;
-        _isLoading = false;
-      }
-    } else {
-      _controller = null;
-      _isLoading = false;
-    }
+    _gymLocation = LatLng(widget.latitude, widget.longitude);
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final showWebFallback = kIsWeb || _controller == null;
+    const primaryColor = Color(0xFFFFB800);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(widget.gymName, style: const TextStyle(color: Colors.black, fontSize: 16)),
+        title: Text(
+          widget.gymName, 
+          style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0.5,
         leading: CloseButton(
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: showWebFallback
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.map_outlined, size: 80, color: Color(0xFFFFB800)),
-                    const SizedBox(height: 24),
-                    Text(
-                      widget.gymName,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _gymLocation,
+              initialZoom: 15.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                subdomains: const ['0', '1', '2', '3'],
+                userAgentPackageName: 'com.example.fitness_app',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _gymLocation,
+                    width: 80,
+                    height: 80,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 44,
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Koordinat: ${widget.latitude}, ${widget.longitude}",
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      "Peta interaktif tidak dapat dibuka langsung di dalam browser web karena keterbatasan browser sandbox.",
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFB800),
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // My Location Button
+          Positioned(
+            top: 24,
+            right: 24,
+            child: FloatingActionButton(
+              heroTag: 'gym_view_my_location_btn',
+              mini: true,
+              backgroundColor: Colors.white,
+              elevation: 4,
+              onPressed: () async {
+                try {
+                  LocationPermission permission = await Geolocator.checkPermission();
+                  if (permission == LocationPermission.denied) {
+                    permission = await Geolocator.requestPermission();
+                    if (permission == LocationPermission.denied) return;
+                  }
+                  if (permission == LocationPermission.deniedForever) return;
+                  
+                  final Position position = await Geolocator.getCurrentPosition(
+                    desiredAccuracy: LocationAccuracy.high,
+                  );
+                  final userLatLng = LatLng(position.latitude, position.longitude);
+                  _mapController.move(userLatLng, 15.0);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal mendapatkan lokasi GPS: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Icon(Icons.my_location, color: Colors.blue),
+            ),
+          ),
+          // Gym Position Centering Button
+          Positioned(
+            top: 80,
+            right: 24,
+            child: FloatingActionButton(
+              heroTag: 'gym_view_target_location_btn',
+              mini: true,
+              backgroundColor: Colors.white,
+              elevation: 4,
+              onPressed: () {
+                _mapController.move(_gymLocation, 15.0);
+              },
+              child: const Icon(Icons.fitness_center, color: Colors.red),
+            ),
+          ),
+          // Clean bottom UI card for gym details
+          Positioned(
+            bottom: 24,
+            left: 24,
+            right: 24,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
                         ),
-                        onPressed: () {
-                          js.context.callMethod('open', [_url, '_blank']);
-                        },
-                        icon: const Icon(Icons.open_in_new),
-                        label: const Text(
-                          "Buka di Browser Tab Baru",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.gymName,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Lokasi Hub Mitra Gym',
+                              style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : Stack(
-              children: [
-                WebViewWidget(controller: _controller!),
-                if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFFFB800)),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.explore_outlined, color: Colors.grey, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Koordinat: ${widget.latitude.toStringAsFixed(5)}, ${widget.longitude.toStringAsFixed(5)}',
+                          style: const TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        _mapController.move(_gymLocation, 16.0);
+                      },
+                      icon: const Icon(Icons.explore, size: 20),
+                      child: const Text('Fokus ke Lokasi Gym', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }

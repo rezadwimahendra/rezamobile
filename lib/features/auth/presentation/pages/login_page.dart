@@ -78,7 +78,6 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     onChanged: (_) => setState(() {}),
-                    cursorColor: primaryColor,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -90,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: primaryColor, width: 2),
+                        borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -108,7 +107,6 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _passwordController,
                     obscureText: true,
                     onChanged: (_) => setState(() {}),
-                    cursorColor: primaryColor,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -120,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: primaryColor, width: 2),
+                        borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),

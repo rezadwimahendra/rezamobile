@@ -16,6 +16,7 @@ abstract class ProfessionalRepository {
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    List<String>? existingGallery,
     double? latitude,
     double? longitude,
     String? openTime,

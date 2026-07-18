@@ -16,6 +16,11 @@ class AppTheme {
         surface: Colors.white,
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Color(0xFF0F172A),
+        selectionColor: Color(0xFFCBD5E1),
+        selectionHandleColor: Color(0xFF0F172A),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
@@ -48,7 +53,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
         ),
       ),
     );
@@ -64,6 +69,11 @@ class AppTheme {
         surface: Color(0xFF1E1E1E),
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Color(0xFFE2E8F0),
+        selectionColor: Color(0xFF475569),
+        selectionHandleColor: Color(0xFFE2E8F0),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
@@ -95,7 +105,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
         ),
       ),
     );

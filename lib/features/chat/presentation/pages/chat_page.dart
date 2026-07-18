@@ -340,7 +340,6 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: TextField(
               controller: _msgController,
-              cursorColor: primaryColor,
               decoration: InputDecoration(
                 hintText: 'Tulis pesan...',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),

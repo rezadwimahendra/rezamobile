@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pocketbase/pocketbase.dart';
 import '../../../../injection.dart';
 
 class AIAnalysisResult {
@@ -37,37 +38,83 @@ class GroqService {
 
   GroqService({required this.apiKeys});
 
-  void _rotateKey() {
-    if (apiKeys.length <= 1) return;
-    _currentKeyIndex = (_currentKeyIndex + 1) % apiKeys.length;
+  void _rotateKey(int keysCount) {
+    if (keysCount <= 1) return;
+    _currentKeyIndex = (_currentKeyIndex + 1) % keysCount;
     print('DEBUG: Mengganti ke Groq API Key indeks ke-$_currentKeyIndex');
   }
 
   Future<AIAnalysisResult?> identifyFood(XFile image) async {
     try {
-      // 1. Cek Kuota Harian di SharedPreferences
+      // 1. Cek Kuota 24 Jam di SharedPreferences (di-scope ke masing-masing user)
       final prefs = sl<SharedPreferences>();
-      final todayStr = DateTime.now().toIso8601String().substring(0, 10); // Format "yyyy-MM-dd"
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final dayAgoMs = nowMs - 24 * 60 * 60 * 1000;
       
-      final lastAnalysisDate = prefs.getString('ai_last_analysis_date') ?? '';
-      int count = prefs.getInt('ai_daily_analysis_count') ?? 0;
+      final pb = sl<PocketBase>();
+      final userId = pb.authStore.model?.id ?? 'anonymous';
       
-      if (lastAnalysisDate == todayStr) {
-        if (count >= 2) {
-          throw 'Batas kuota harian tercapai. Anda hanya bisa menggunakan fitur AI 2 kali per hari. Silakan coba lagi besok!';
+      // Load keys dari koleksi 'settings' di PocketBase secara dinamis (fallback ke local keys jika gagal/kosong)
+      List<String> activeKeys = [...apiKeys];
+      try {
+        final settingsList = await pb.collection('settings').getFullList();
+        if (settingsList.isNotEmpty) {
+          final dbKeysString = settingsList.first.getStringValue('groq_keys');
+          if (dbKeysString.isNotEmpty) {
+            final parsedKeys = dbKeysString
+                .split(RegExp(r'[,\n]'))
+                .map((key) => key.trim())
+                .where((key) => key.isNotEmpty)
+                .toList();
+            if (parsedKeys.isNotEmpty) {
+              activeKeys = parsedKeys;
+              print('DEBUG: Menggunakan ${activeKeys.length} API Keys dari database PocketBase settings');
+            }
+          }
         }
+      } catch (e) {
+        print('DEBUG: Menggunakan fallback apiKeys lokal karena: $e');
+      }
+
+      final dbKey = 'ai_analysis_timestamps_$userId';
+      
+      final timestampsPool = prefs.getStringList(dbKey) ?? [];
+      final recentTimestamps = timestampsPool
+          .map((t) => int.tryParse(t) ?? 0)
+          .where((t) => t >= dayAgoMs)
+          .toList();
+
+      if (recentTimestamps.length >= 2) {
+        final oldestTimestamp = recentTimestamps.first;
+        final nextAvailableTimeMs = oldestTimestamp + 24 * 60 * 60 * 1000;
+        final remainingMs = nextAvailableTimeMs - nowMs;
+        
+        final hours = remainingMs ~/ (60 * 60 * 1000);
+        final minutes = (remainingMs % (60 * 60 * 1000)) ~/ (60 * 1000);
+        
+        String waitMessage = '';
+        if (hours > 0) {
+          waitMessage = 'dalam $hours jam $minutes menit';
+        } else if (minutes > 0) {
+          waitMessage = 'dalam $minutes menit';
+        } else {
+          waitMessage = 'beberapa detik lagi';
+        }
+        
+        throw 'Batas kuota harian tercapai. Anda hanya bisa menggunakan fitur AI 2 kali dalam 24 jam. Silakan coba lagi $waitMessage!';
       }
 
       final Uint8List imageBytes = await image.readAsBytes();
       final String base64Image = base64Encode(imageBytes);
 
       int attempts = 0;
-      final maxAttempts = apiKeys.isNotEmpty ? apiKeys.length : 1;
+      final maxAttempts = activeKeys.isNotEmpty ? activeKeys.length : 1;
 
       while (attempts < maxAttempts) {
-        final activeKey = apiKeys.isNotEmpty ? apiKeys[_currentKeyIndex] : '';
+        final currentKeyIdx = _currentKeyIndex % activeKeys.length;
+        final activeKey = activeKeys.isNotEmpty ? activeKeys[currentKeyIdx] : '';
         try {
-          print('DEBUG: Mengirim foto ke Groq dengan API Key index $_currentKeyIndex...');
+          print('DEBUG: Mengirim foto ke Groq dengan API Key index $currentKeyIdx...');
           
           final response = await http.post(
             Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
@@ -76,10 +123,11 @@ class GroqService {
               'Content-Type': 'application/json',
             },
             body: jsonEncode({
-              'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+              'model': 'qwen/qwen3.6-27b',
               'response_format': {
                 'type': 'json_object'
               },
+              'reasoning_effort': 'none',
               'messages': [
                 {
                   'role': 'user',
@@ -123,13 +171,12 @@ class GroqService {
               final result = AIAnalysisResult.fromJson(parsedJson);
               print('DEBUG: Groq mendeteksi: ${result.foodName} (${result.calories} kalori)');
 
-              // 2. Berhasil! Simpan hitungan baru
-              if (lastAnalysisDate != todayStr) {
-                await prefs.setString('ai_last_analysis_date', todayStr);
-                await prefs.setInt('ai_daily_analysis_count', 1);
-              } else {
-                await prefs.setInt('ai_daily_analysis_count', count + 1);
-              }
+              // 2. Berhasil! Simpan timestamp baru
+              final List<String> updatedTimestamps = [
+                ...recentTimestamps.map((e) => e.toString()),
+                nowMs.toString()
+              ];
+              await prefs.setStringList(dbKey, updatedTimestamps);
 
               return result;
             }
@@ -140,22 +187,22 @@ class GroqService {
           
           attempts++;
           if (attempts < maxAttempts) {
-            print('DEBUG: Groq Key index $_currentKeyIndex gagal. Memutar ke key selanjutnya...');
-            _rotateKey();
+            print('DEBUG: Groq Key index $currentKeyIdx gagal. Memutar ke key selanjutnya...');
+            _rotateKey(activeKeys.length);
             continue; // Coba lagi dengan key cadangan
           } else {
             throw 'Gagal menghubungi Groq: HTTP ${response.statusCode} - $errorBody';
           }
         } catch (e) {
-          print('DEBUG: Exception pada Groq Key index $_currentKeyIndex: $e');
+          print('DEBUG: Exception pada Groq Key index $currentKeyIdx: $e');
           if (e.toString().contains('Batas kuota harian')) {
             rethrow;
           }
           
           attempts++;
           if (attempts < maxAttempts) {
-            print('DEBUG: Key index $_currentKeyIndex gagal dengan error. Memutar ke key selanjutnya...');
-            _rotateKey();
+            print('DEBUG: Key index $currentKeyIdx gagal dengan error. Memutar ke key selanjutnya...');
+            _rotateKey(activeKeys.length);
             continue;
           }
           throw 'Gagal menghubungi AI setelah $attempts percobaan: $e';

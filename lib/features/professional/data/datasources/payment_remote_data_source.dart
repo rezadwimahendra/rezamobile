@@ -39,7 +39,7 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['redirect_url'] ?? "https://app.midtrans.com/snap/v2/vtweb/${data['token']}"; 
+        return data['redirect_url'] ?? "https://app.sandbox.midtrans.com/snap/v2/vtweb/${data['token']}"; 
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception('Midtrans Error: ${errorData['message'] ?? response.body}');

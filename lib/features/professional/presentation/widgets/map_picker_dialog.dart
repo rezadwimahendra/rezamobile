@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MapPickerDialog extends StatefulWidget {
   final LatLng initialLocation;
@@ -22,6 +23,40 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   void initState() {
     super.initState();
     _selectedLatLng = widget.initialLocation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _determineInitialLocation();
+    });
+  }
+
+  Future<void> _determineInitialLocation() async {
+    if (widget.initialLocation.latitude == -6.2000 && widget.initialLocation.longitude == 106.8166) {
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) return;
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) return;
+        }
+        
+        if (permission == LocationPermission.deniedForever) return;
+
+        final Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 4),
+        );
+        
+        if (mounted) {
+          setState(() {
+            _selectedLatLng = LatLng(position.latitude, position.longitude);
+          });
+          _mapController.move(_selectedLatLng, 15.0);
+        }
+      } catch (e) {
+        debugPrint('MapPickerDialog auto GPS error: $e');
+      }
+    }
   }
 
   @override
@@ -36,7 +71,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Geser & Tekan untuk Pin Lokasi', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Tentukan Lokasi', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0.5,
         leading: CloseButton(
@@ -67,7 +102,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                subdomains: const ['0', '1', '2', '3'],
                 userAgentPackageName: 'com.example.fitness_app',
               ),
               MarkerLayer(
@@ -85,6 +121,42 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                 ],
               ),
             ],
+          ),
+          Positioned(
+            top: 24,
+            right: 24,
+            child: FloatingActionButton(
+              heroTag: 'my_location_btn',
+              mini: true,
+              backgroundColor: Colors.white,
+              elevation: 4,
+              onPressed: () async {
+                try {
+                  LocationPermission permission = await Geolocator.checkPermission();
+                  if (permission == LocationPermission.denied) {
+                    permission = await Geolocator.requestPermission();
+                    if (permission == LocationPermission.denied) return;
+                  }
+                  if (permission == LocationPermission.deniedForever) return;
+                  
+                  final Position position = await Geolocator.getCurrentPosition(
+                    desiredAccuracy: LocationAccuracy.high,
+                  );
+                  final targetLatLng = LatLng(position.latitude, position.longitude);
+                  setState(() {
+                    _selectedLatLng = targetLatLng;
+                  });
+                  _mapController.move(targetLatLng, 15.0);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal mendapatkan lokasi GPS: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Icon(Icons.my_location, color: Colors.blue),
+            ),
           ),
           Positioned(
             bottom: 24,

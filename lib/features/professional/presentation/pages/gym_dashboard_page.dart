@@ -1,215 +1,223 @@
 import 'package:flutter/material.dart';
-import './manage_portfolio_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../../../../injection.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../bloc/professional_bloc.dart';
+import '../bloc/professional_event.dart';
+import '../bloc/professional_state.dart';
 import './setup_professional_page.dart';
+import './consultation_history_page.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/presentation/pages/complete_profile_page.dart';
+import '../../../profile/presentation/pages/security_settings_page.dart';
+import '../../../profile/presentation/pages/help_center_page.dart';
 
-class GymDashboardPage extends StatelessWidget {
+class GymDashboardPage extends StatefulWidget {
   final String userName;
   const GymDashboardPage({super.key, required this.userName});
 
   @override
-  Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    const scaffoldBg = Color(0xFFF8F9FA);
+  State<GymDashboardPage> createState() => _GymDashboardPageState();
+}
 
-    return Scaffold(
-      backgroundColor: scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
+class _GymDashboardPageState extends State<GymDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    final userId = sl<AuthBloc>().state.user?.id;
+    if (userId != null) {
+      context.read<ProfessionalBloc>().add(
+        ProfessionalDataRequested(userId: userId, role: 'gym'),
+      );
+    }
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, top: 24, bottom: 12),
+      child: Text(
+        title, 
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueGrey, letterSpacing: 1.2)
+      ),
+    );
+  }
+
+  Widget _buildMenuCard({required List<Widget> items}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.015), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(children: items),
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context,
+    IconData icon, 
+    String title, 
+    String subtitle,
+    Color accentColor,
+    {VoidCallback? onTap}
+  ) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: accentColor.withOpacity(0.1), 
+          borderRadius: BorderRadius.circular(12)
         ),
-        title: const Text(
-          'Gym Management',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black54),
-            onPressed: () {},
+        child: Icon(icon, color: accentColor, size: 20),
+      ),
+      title: Text(
+        title, 
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              Row(
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    const scaffoldBg = Color(0xFFF8FAFC);
+    final baseUrl = sl<PocketBase>().baseUrl;
+
+    return BlocBuilder<ProfessionalBloc, ProfessionalState>(
+      builder: (context, state) {
+        final prof = state.professional;
+        String? imageUrl;
+        if (prof != null && prof.avatar != null && prof.avatar!.toString().trim().isNotEmpty) {
+          imageUrl = "$baseUrl/api/files/gyms/${prof.id}/${prof.avatar}";
+        }
+        if (imageUrl != null && imageUrl.endsWith('/')) {
+          imageUrl = null;
+        }
+
+        final displayUserName = prof?.name ?? widget.userName;
+
+        return Scaffold(
+          backgroundColor: scaffoldBg,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0.5,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'Gym Management',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            centerTitle: true,
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Flat Header (matching profile_page.dart layout)
                   Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(Icons.apartment, color: primaryColor, size: 28),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Selamat Datang Mitra,', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: primaryColor, width: 2),
+                            image: imageUrl != null 
+                                ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                                : null,
+                          ),
+                          child: imageUrl == null 
+                              ? Icon(Icons.apartment, color: primaryColor, size: 44)
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
                         Text(
-                          userName, 
-                          style: const TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold),
+                          displayUserName, 
+                          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'FitMotion Gym Partner', 
+                          style: TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 32),
 
-              const Text('OPERASIONAL HARI INI', style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildStatusCard('Kunjungan', '0', Icons.login, Colors.green),
-                  const SizedBox(width: 12),
-                  _buildStatusCard('Member Baru', '0', Icons.person_add, Colors.blue),
-                  const SizedBox(width: 12),
-                  _buildStatusCard('Sesi Aktif', '0', Icons.fitness_center, Colors.orange),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              const Text('QUICK ACTIONS', style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              const SizedBox(height: 16),
-              
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.1,
-                children: [
-                  _buildActionCard(
-                    Icons.store_outlined, 
-                    'Profil Publik', 
-                    'Atur Lokasi, Harga & Bio',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SetupProfessionalPage(roleType: 'gym'))),
-                  ),
-                  _buildActionCard(Icons.qr_code_scanner, 'Check-in Member', 'Konfirmasi Kedatangan'),
-                  _buildActionCard(Icons.card_membership, 'Paket Member', 'Atur Harga & Benefit'),
-                  _buildActionCard(Icons.people_outline, 'Manajemen Staff', 'Kelola Trainer & Tim'),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-              
-              const Text('RINGKASAN MINGGUAN', style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.bar_chart_rounded, color: primaryColor.withOpacity(0.2), size: 48),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Data statistik kunjungan member\nakan muncul di sini minggu depan.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.black45, fontSize: 13, height: 1.5),
+                  // Quick Actions
+                  _buildSectionHeader('QUICK ACTIONS'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildMenuCard(
+                      items: [
+                        _buildMenuItem(
+                          context,
+                          Icons.store_outlined, 
+                          'Profil Publik', 
+                          'Atur Lokasi, Harga & Bio',
+                          Colors.blue,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SetupProfessionalPage(roleType: 'gym'))),
+                        ),
+                        const Divider(color: Color(0xFFF1F5F9), height: 1, indent: 56),
+                        _buildMenuItem(
+                          context,
+                          Icons.chat_bubble_outline, 
+                          'Chat Konsultasi', 
+                          'Pesan Baru Klien',
+                          Colors.orange,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsultationHistoryPage())),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 60),
+                ],
               ),
-              const SizedBox(height: 120),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 8),
-            Text(
-              value, 
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-            Text(
-              label, 
-              style: const TextStyle(color: Colors.black38, fontSize: 10),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionCard(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.black87, size: 22),
-            const SizedBox(height: 8),
-            Flexible(
-              child: Text(
-                title, 
-                style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Flexible(
-              child: Text(
-                subtitle, 
-                style: const TextStyle(color: Colors.black38, fontSize: 9),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

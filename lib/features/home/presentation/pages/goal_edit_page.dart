@@ -107,7 +107,6 @@ class _GoalEditPageState extends State<GoalEditPage> {
               controller: _goalController,
               keyboardType: TextInputType.number,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
-              cursorColor: primaryColor,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -121,7 +120,7 @@ class _GoalEditPageState extends State<GoalEditPage> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: primaryColor, width: 2),
+                  borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),

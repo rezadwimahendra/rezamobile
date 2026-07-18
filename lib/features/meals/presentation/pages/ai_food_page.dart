@@ -1,8 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../injection.dart';
 import '../../data/services/groq_service.dart';
+import '../../data/models/food_model.dart';
+import '../bloc/meals_bloc.dart';
+import '../bloc/meals_event.dart';
+import '../bloc/meals_state.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import 'food_search_page.dart';
 
 class AiFoodPage extends StatefulWidget {
@@ -113,14 +119,142 @@ class _AiFoodPageState extends State<AiFoodPage> {
     );
   }
 
+  void _showAddMealDirectlySheet() {
+    if (_analysisResult == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                alignment: Alignment.center,
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih Waktu Makan',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tambahkan "${_analysisResult!.foodName}" ke catatan harian Anda.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              
+              _buildMealTypeOption(ctx, 'Sarapan', Icons.light_mode_outlined),
+              const SizedBox(height: 8),
+              _buildMealTypeOption(ctx, 'Makan Siang', Icons.wb_sunny_outlined),
+              const SizedBox(height: 8),
+              _buildMealTypeOption(ctx, 'Makan Malam', Icons.nightlight_outlined),
+              const SizedBox(height: 8),
+              _buildMealTypeOption(ctx, 'Cemilan', Icons.cookie_outlined),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMealTypeOption(BuildContext sheetContext, String label, IconData icon) {
+    return InkWell(
+      onTap: () {
+        Navigator.pop(sheetContext);
+        _addFoodDirectlyToDiary(label);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: widget.primaryColor, size: 20),
+            const SizedBox(width: 14),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addFoodDirectlyToDiary(String mealType) {
+    if (_analysisResult == null) return;
+    
+    final userId = sl<AuthBloc>().state.user?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesi telah berakhir, silakan login kembali'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final food = FoodModel(
+      id: 'ai_temp_${DateTime.now().millisecondsSinceEpoch}',
+      name: _analysisResult!.foodName,
+      calories: _analysisResult!.calories,
+      carbs: _analysisResult!.carbs,
+      protein: _analysisResult!.protein,
+      fat: _analysisResult!.fat,
+    );
+
+    context.read<MealsBloc>().add(MealAdded(
+      userId: userId,
+      food: food,
+      mealType: mealType.toLowerCase(),
+      servings: 1,
+      date: DateTime.now(),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return BlocListener<MealsBloc, MealsState>(
+      listener: (context, state) {
+        if (state.status == MealsStatus.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${_analysisResult?.foodName ?? 'Makanan'}" berhasil ditambahkan ke catatan harian!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state.status == MealsStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menambahkan makanan: ${state.errorMessage}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // Header Tab
           const Column(
             children: [
@@ -238,15 +372,36 @@ class _AiFoodPageState extends State<AiFoodPage> {
                   ],
                   const SizedBox(height: 16),
                   if (_detectedFood != "Makanan tidak dikenali")
-                    ElevatedButton.icon(
-                      onPressed: _navigateToSearch,
-                      icon: const Icon(Icons.search, color: Colors.black, size: 18),
-                      label: const Text('Cari & Tambah Nutrisi', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.primaryColor,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _showAddMealDirectlySheet,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              elevation: 0,
+                              side: BorderSide(color: widget.primaryColor, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Tambah Langsung', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _navigateToSearch,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: widget.primaryColor,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Cari & Bandingkan', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -303,6 +458,7 @@ class _AiFoodPageState extends State<AiFoodPage> {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

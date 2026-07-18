@@ -200,11 +200,12 @@ class _DiaryTabState extends State<DiaryTab> {
               'sarapan': [],
               'makan siang': [],
               'makan malam': [],
-              'camilan': [],
+              'cemilan': [],
             };
 
             for (var meal in mealsState.userMeals) {
-              final type = meal.mealType.toLowerCase();
+              var type = meal.mealType.toLowerCase();
+              if (type == 'camilan') type = 'cemilan';
               final cals = meal.food.calories * meal.servings;
               totalCals += cals;
               if (categoricalMeals.containsKey(type)) {
@@ -251,7 +252,7 @@ class _DiaryTabState extends State<DiaryTab> {
                   _buildMealCard(context, 'Sarapan', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['sarapan'] ?? []),
                   _buildMealCard(context, 'Makan Siang', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['makan siang'] ?? []),
                   _buildMealCard(context, 'Makan Malam', 'Rekomendasi ${(goalCals * 0.3).toInt()} kal', categoricalMeals['makan malam'] ?? []),
-                  _buildMealCard(context, 'Camilan', 'Rekomendasi ${(goalCals * 0.1).toInt()} kal', categoricalMeals['camilan'] ?? []),
+                  _buildMealCard(context, 'Cemilan', 'Rekomendasi ${(goalCals * 0.1).toInt()} kal', categoricalMeals['cemilan'] ?? []),
                   
                   const SizedBox(height: 40),
                 ],

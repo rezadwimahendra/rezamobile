@@ -10,6 +10,7 @@ import '../bloc/professional_event.dart';
 import '../bloc/professional_state.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:geolocator/geolocator.dart';
 import '../widgets/map_picker_dialog.dart';
 
 class SetupProfessionalPage extends StatefulWidget {
@@ -31,12 +32,15 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
   final _latCtrl = TextEditingController();
   final _lngCtrl = TextEditingController();
   final _openDaysCtrl = TextEditingController();
+  final _locationTextCtrl = TextEditingController();
   
   File? _avatarFile;
   final List<File> _galleryFiles = [];
+  List<String> _existingGalleryUrls = [];
   final ImagePicker _picker = ImagePicker();
   bool _isEditMode = false;
   bool _isDataLoaded = false;
+  bool _isLocating = false;
   String? _existingAvatarUrl;
   String? _existingProfessionalId;
   String? _openTime;
@@ -52,6 +56,7 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
     _latCtrl.dispose();
     _lngCtrl.dispose();
     _openDaysCtrl.dispose();
+    _locationTextCtrl.dispose();
     super.dispose();
   }
 
@@ -59,12 +64,57 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
   void initState() {
     super.initState();
     _loadExistingData();
+    _initializeGPSLocation();
   }
 
   void _loadExistingData() {
     final userId = sl<AuthBloc>().state.user?.id;
     if (userId != null) {
       context.read<ProfessionalBloc>().add(ProfessionalDataRequested(userId: userId, role: widget.roleType));
+    }
+  }
+
+  Future<void> _initializeGPSLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) setState(() => _isLocating = true);
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) setState(() => _isLocating = false);
+          return;
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _isLocating = false);
+        return;
+      }
+
+      if (mounted) setState(() => _isLocating = true);
+
+      final Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final currentLatStr = _latCtrl.text.trim();
+      final isCleanEmpty = currentLatStr.isEmpty || currentLatStr == '0' || currentLatStr == '0.0';
+
+      if (mounted && isCleanEmpty) {
+        setState(() {
+          _latCtrl.text = position.latitude.toString();
+          _lngCtrl.text = position.longitude.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting raw device coordinates: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLocating = false);
+      }
     }
   }
 
@@ -115,14 +165,15 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
       price: priceNumeric,
       nonMemberPrice: nonMemberPriceNumeric,
       specialty: widget.roleType == 'trainer' ? _specialtyCtrl.text : null,
-      location: widget.roleType == 'gym' ? _specialtyCtrl.text : null,
+      location: widget.roleType == 'gym' ? _specialtyCtrl.text : _locationTextCtrl.text,
       avatarFile: _avatarFile,
       galleryFiles: _galleryFiles.isNotEmpty ? _galleryFiles : null,
+      existingGallery: _existingGalleryUrls,
       latitude: lat,
       longitude: lng,
-      openTime: widget.roleType == 'gym' ? _openTime : null,
-      closeTime: widget.roleType == 'gym' ? _closeTime : null,
-      openDays: widget.roleType == 'gym' ? _openDaysCtrl.text : null,
+      openTime: null,
+      closeTime: null,
+      openDays: null,
     ));
   }
 
@@ -144,6 +195,7 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
               _priceCtrl.text = state.professional!.price.toString();
               _nonMemberPriceCtrl.text = state.professional!.nonMemberPrice?.toString() ?? '';
               _specialtyCtrl.text = isTrainer ? (state.professional!.specialty ?? '') : (state.professional!.location ?? '');
+              _locationTextCtrl.text = isTrainer ? (state.professional!.location ?? '') : '';
               _existingAvatarUrl = state.professional!.avatar;
               _latCtrl.text = state.professional!.latitude?.toString() ?? '';
               _lngCtrl.text = state.professional!.longitude?.toString() ?? '';
@@ -151,6 +203,11 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
               _closeTime = state.professional!.closeTime;
               _openDaysCtrl.text = state.professional!.openDays ?? '';
               _existingProfessionalId = state.professional!.id;
+              _existingGalleryUrls = List<String>.from(state.professional!.gallery ?? []);
+              final loadedLat = _latCtrl.text.trim();
+              if (loadedLat.isEmpty || loadedLat == '0' || loadedLat == '0.0') {
+                _initializeGPSLocation();
+              }
             });
           } else {
             // Ini saat berhasil Simpan/Terbitkan
@@ -205,82 +262,95 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
                 const SizedBox(height: 20),
                 
                 _buildField(
-                  label: isTrainer ? 'Keahlian' : 'Lokasi Lengkap',
+                  label: isTrainer ? 'Keahlian' : 'Alamat Lengkap',
                   hint: '',
                   controller: _specialtyCtrl,
                 ),
-                if (!isTrainer) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                if (isTrainer) ...[
+                  const SizedBox(height: 20),
+                  _buildField(
+                    label: 'Kota / Lokasi Asal',
+                    hint: 'e.g. Denpasar, Bali atau Sleman, Yogyakarta',
+                    controller: _locationTextCtrl,
+                  ),
+                ],
+                // Display coordinates section for both roles (Trainer & Gym)
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.red, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Koordinat Lokasi Peta',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _isLocating
+                                  ? 'Sedang mendeteksi lokasi HP Anda...'
+                                  : _latCtrl.text.isNotEmpty && _lngCtrl.text.isNotEmpty
+                                      ? 'Lat: ${_latCtrl.text}\nLng: ${_lngCtrl.text}'
+                                      : 'Belum ditentukan (Ketuk tombol peta di bawah untuk menentukan)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: (_isLocating || _latCtrl.text.isNotEmpty) ? Colors.black87 : Colors.grey.shade500,
+                                height: 1.3,
+                                fontWeight: _isLocating ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      side: const BorderSide(color: Color(0xFFFFB800), width: 1.5),
+                      foregroundColor: Colors.black,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on, color: Colors.red, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Koordinat Lokasi Peta',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _latCtrl.text.isNotEmpty && _lngCtrl.text.isNotEmpty
-                                    ? 'Lat: ${_latCtrl.text}\nLng: ${_lngCtrl.text}'
-                                    : 'Belum ditentukan (Ketuk tombol peta di bawah untuk menentukan)',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: _latCtrl.text.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
+                    onPressed: () async {
+                      final parsedLat = double.tryParse(_latCtrl.text);
+                      final parsedLng = double.tryParse(_lngCtrl.text);
+                      final curLat = (parsedLat != null && parsedLat != 0.0) ? parsedLat : -6.2000;
+                      final curLng = (parsedLng != null && parsedLng != 0.0) ? parsedLng : 106.8166;
+                      final LatLng? result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MapPickerDialog(
+                            initialLocation: LatLng(curLat, curLng),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _latCtrl.text = result.latitude.toString();
+                          _lngCtrl.text = result.longitude.toString();
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.map, color: Color(0xFFFFB800)),
+                    label: const Text('Pilih Lokasi dari Peta', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        side: const BorderSide(color: Color(0xFFFFB800), width: 1.5),
-                        foregroundColor: Colors.black,
-                      ),
-                      onPressed: () async {
-                        final curLat = double.tryParse(_latCtrl.text) ?? -6.2000;
-                        final curLng = double.tryParse(_lngCtrl.text) ?? 106.8166;
-                        final LatLng? result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MapPickerDialog(
-                              initialLocation: LatLng(curLat, curLng),
-                            ),
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() {
-                            _latCtrl.text = result.latitude.toString();
-                            _lngCtrl.text = result.longitude.toString();
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.map, color: Color(0xFFFFB800)),
-                      label: const Text('Pilih Lokasi dari Peta', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                ),
+                const SizedBox(height: 20),
                 
                 _buildField(
                   label: isTrainer ? 'Tarif per Sesi' : 'Harga Member (1 Bulan)',
@@ -297,92 +367,6 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
                     controller: _nonMemberPriceCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('JADWAL OPERASIONAL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueGrey, letterSpacing: 1.5)),
-                  const SizedBox(height: 16),
-                  _buildField(
-                    label: 'Hari Kerja/Operasional',
-                    hint: 'e.g. Senin - Sabtu atau Setiap Hari',
-                    controller: _openDaysCtrl,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            side: BorderSide(color: Colors.grey.shade300),
-                            alignment: Alignment.centerLeft,
-                          ),
-                          onPressed: () async {
-                            final TimeOfDay? picked = await showTimePicker(
-                              context: context,
-                              initialTime: _openTime != null
-                                  ? TimeOfDay(
-                                      hour: int.parse(_openTime!.split(':')[0]),
-                                      minute: int.parse(_openTime!.split(':')[1]),
-                                    )
-                                  : const TimeOfDay(hour: 8, minute: 0),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                final hour = picked.hour.toString().padLeft(2, '0');
-                                final minute = picked.minute.toString().padLeft(2, '0');
-                                _openTime = '$hour:$minute';
-                              });
-                            }
-                          },
-                          icon: const Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Icon(Icons.access_time_filled, color: Colors.green),
-                          ),
-                          label: Text(
-                            _openTime != null ? 'Buka: $_openTime' : 'Pilih Jam Buka',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            side: BorderSide(color: Colors.grey.shade300),
-                            alignment: Alignment.centerLeft,
-                          ),
-                          onPressed: () async {
-                            final TimeOfDay? picked = await showTimePicker(
-                              context: context,
-                              initialTime: _closeTime != null
-                                  ? TimeOfDay(
-                                      hour: int.parse(_closeTime!.split(':')[0]),
-                                      minute: int.parse(_closeTime!.split(':')[1]),
-                                    )
-                                  : const TimeOfDay(hour: 22, minute: 0),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                final hour = picked.hour.toString().padLeft(2, '0');
-                                final minute = picked.minute.toString().padLeft(2, '0');
-                                _closeTime = '$hour:$minute';
-                              });
-                            }
-                          },
-                          icon: const Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Icon(Icons.access_time_filled, color: Colors.red),
-                          ),
-                          label: Text(
-                            _closeTime != null ? 'Tutup: $_closeTime' : 'Pilih Jam Tutup',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
                 const SizedBox(height: 32),
@@ -465,6 +449,7 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
   }
 
   Widget _buildGalleryPicker(Color primaryColor) {
+    final totalItemCount = _existingGalleryUrls.length + _galleryFiles.length + 1;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -473,9 +458,9 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
-      itemCount: _galleryFiles.length + 1,
+      itemCount: totalItemCount,
       itemBuilder: (context, index) {
-        if (index == _galleryFiles.length) {
+        if (index == totalItemCount - 1) {
           return GestureDetector(
             onTap: _pickGallery,
             child: Container(
@@ -488,27 +473,66 @@ class _SetupProfessionalPageState extends State<SetupProfessionalPage> {
             ),
           );
         }
-        return Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: DecorationImage(image: FileImage(_galleryFiles[index]), fit: BoxFit.cover),
-              ),
-            ),
-            Positioned(
-              top: 5, right: 5,
-              child: GestureDetector(
-                onTap: () => setState(() => _galleryFiles.removeAt(index)),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, size: 12, color: Colors.white),
+        
+        if (index < _existingGalleryUrls.length) {
+          // Network images
+          final filename = _existingGalleryUrls[index];
+          final collection = widget.roleType == 'trainer' ? 'trainers' : 'gyms';
+          final imgUrl = '${sl<PocketBase>().baseUrl}/api/files/$collection/$_existingProfessionalId/$filename';
+          return Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(image: NetworkImage(imgUrl), fit: BoxFit.cover),
                 ),
               ),
-            ),
-          ],
-        );
+              Positioned(
+                top: 5, right: 5,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _existingGalleryUrls.removeAt(index);
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          );
+        } else {
+          // Local files
+          final localIndex = index - _existingGalleryUrls.length;
+          return Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  image: DecorationImage(image: FileImage(_galleryFiles[localIndex]), fit: BoxFit.cover),
+                ),
+              ),
+              Positioned(
+                top: 5, right: 5,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _galleryFiles.removeAt(localIndex);
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
       },
     );
   }

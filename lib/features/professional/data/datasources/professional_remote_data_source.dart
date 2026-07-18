@@ -16,6 +16,7 @@ abstract class ProfessionalRemoteDataSource {
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    List<String>? existingGallery,
     double? latitude,
     double? longitude,
     String? openTime,
@@ -58,6 +59,7 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
     String? location,
     File? avatarFile,
     List<File>? galleryFiles,
+    List<String>? existingGallery,
     double? latitude,
     double? longitude,
     String? openTime,
@@ -67,7 +69,7 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
     final collection = role == 'trainer' ? 'trainers' : 'gyms';
     
     // Siapkan body data
-    final body = {
+    final Map<String, dynamic> body = {
       'user': userId,
       'name': name,
       'description': description,
@@ -81,6 +83,7 @@ class ProfessionalRemoteDataSourceImpl implements ProfessionalRemoteDataSource {
     if (openTime != null) body['open_time'] = openTime;
     if (closeTime != null) body['close_time'] = closeTime;
     if (openDays != null) body['open_days'] = openDays;
+    if (existingGallery != null) body['gallery'] = existingGallery;
 
     // Siapkan file list
     final List<http.MultipartFile> files = [];

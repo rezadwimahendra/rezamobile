@@ -22,6 +22,7 @@ class _GymListPageState extends State<GymListPage> {
   double _userLat = -6.2000;
   double _userLng = 106.8166;
   bool _isRealLocation = false;
+  String _sortBy = 'distance'; // 'distance', 'price_asc', 'price_desc', 'name'
 
   @override
   void initState() {
@@ -30,21 +31,61 @@ class _GymListPageState extends State<GymListPage> {
     _getUserLocation();
   }
 
-  Future<void> _getUserLocation() async {
+  Future<void> _getUserLocation({bool showStatus = false}) async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
+      if (!serviceEnabled) {
+        if (showStatus && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Layanan lokasi/GPS tidak aktif. Aktifkan GPS pada HP Anda.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          if (showStatus && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Izin akses lokasi ditolak.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
       }
       
-      if (permission == LocationPermission.deniedForever) return;
+      if (permission == LocationPermission.deniedForever) {
+        if (showStatus && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin lokasi ditolak permanen. Silakan izinkan lewat pengaturan HP.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (showStatus && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mencari sinyal GPS Anda...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
 
       final Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5),
       );
 
       if (mounted) {
@@ -53,9 +94,47 @@ class _GymListPageState extends State<GymListPage> {
           _userLng = position.longitude;
           _isRealLocation = true;
         });
+        if (showStatus && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lokasi GPS diperbarui!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error getting raw location: $e');
+      if (mounted) {
+        try {
+          final lastPosition = await Geolocator.getLastKnownPosition();
+          if (lastPosition != null) {
+            setState(() {
+              _userLat = lastPosition.latitude;
+              _userLng = lastPosition.longitude;
+              _isRealLocation = true;
+            });
+            if (showStatus && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Menggunakan koordinat GPS terakhir yang tersimpan.'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+            return;
+          }
+        } catch (_) {}
+
+        if (showStatus && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Koneksi GPS lemah: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -115,6 +194,79 @@ class _GymListPageState extends State<GymListPage> {
             ),
           ),
           
+          // Location status & trigger row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1),
+                top: BorderSide(color: Color(0xFFF1F5F9), width: 1),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isRealLocation ? Icons.gps_fixed : Icons.gps_off_outlined,
+                        size: 16,
+                        color: _isRealLocation ? Colors.green : Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isRealLocation 
+                              ? 'GPS Aktif (Mengurutkan dengan Jarak)' 
+                              : 'GPS mati/simulasi (Akurasi Terbatas)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _isRealLocation ? Colors.green.shade800 : Colors.orange.shade800,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _getUserLocation(showStatus: true),
+                  icon: const Icon(Icons.my_location, size: 14, color: primaryColor),
+                  label: const Text('Bagikan GPS', style: TextStyle(fontSize: 12, color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    backgroundColor: primaryColor.withOpacity(0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Filter Chips Row
+          Container(
+            height: 48,
+            color: Colors.white,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                _buildFilterChip('distance', '📍 Terdekat'),
+                const SizedBox(width: 8),
+                _buildFilterChip('price_asc', '💵 Termurah'),
+                const SizedBox(width: 8),
+                _buildFilterChip('price_desc', '📈 Termahal'),
+                const SizedBox(width: 8),
+                _buildFilterChip('name', '🔤 Nama A-Z'),
+              ],
+            ),
+          ),
+          
           Expanded(
             child: BlocBuilder<ProfessionalBloc, ProfessionalState>(
               builder: (context, state) {
@@ -122,20 +274,31 @@ class _GymListPageState extends State<GymListPage> {
                   return const Center(child: CircularProgressIndicator(color: primaryColor));
                 }
 
-                // Sort gyms by distance (if coordinates are present)
+                // Sort gyms based on selected mode
                 final sortedGyms = List<ProfessionalEntity>.from(state.gyms);
                 sortedGyms.sort((a, b) {
-                  if (a.latitude != null && a.longitude != null && b.latitude != null && b.longitude != null) {
-                    final distA = _calculateDistance(_userLat, _userLng, a.latitude!, a.longitude!);
-                    final distB = _calculateDistance(_userLat, _userLng, b.latitude!, b.longitude!);
-                    return distA.compareTo(distB);
+                  if (_sortBy == 'distance') {
+                    if (a.latitude != null && a.longitude != null && b.latitude != null && b.longitude != null) {
+                      final distA = _calculateDistance(_userLat, _userLng, a.latitude!, a.longitude!);
+                      final distB = _calculateDistance(_userLat, _userLng, b.latitude!, b.longitude!);
+                      return distA.compareTo(distB);
+                    }
+                    final hasMapA = a.latitude != null && a.longitude != null;
+                    final hasMapB = b.latitude != null && b.longitude != null;
+                    if (hasMapA && !hasMapB) return -1;
+                    if (!hasMapA && hasMapB) return 1;
+                    return 0;
+                  } else if (_sortBy == 'price_asc') {
+                    final priceA = double.tryParse(a.price.toString().replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
+                    final priceB = double.tryParse(b.price.toString().replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
+                    return priceA.compareTo(priceB);
+                  } else if (_sortBy == 'price_desc') {
+                    final priceA = double.tryParse(a.price.toString().replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
+                    final priceB = double.tryParse(b.price.toString().replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
+                    return priceB.compareTo(priceA);
+                  } else {
+                    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
                   }
-                  // Put gyms with maps first
-                  final hasMapA = a.latitude != null && a.longitude != null;
-                  final hasMapB = b.latitude != null && b.longitude != null;
-                  if (hasMapA && !hasMapB) return -1;
-                  if (!hasMapA && hasMapB) return 1;
-                  return 0;
                 });
 
                 // Filter local results based on search input
@@ -207,10 +370,28 @@ class _GymListPageState extends State<GymListPage> {
                                     Expanded(
                                       child: Text(gym.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
-                                      child: Text('Aktif', style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+                                    Row(
+                                      children: [
+                                        if (index == 0 && distance != null) ...[
+                                          Container(
+                                            margin: const EdgeInsets.only(right: 6),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(8)),
+                                            child: const Row(
+                                              children: [
+                                                Icon(Icons.star, size: 10, color: Colors.amber),
+                                                SizedBox(width: 2),
+                                                Text('Terdekat', style: TextStyle(color: Color(0xFFC49000), fontSize: 10, fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                                          child: Text('Aktif', style: TextStyle(color: Colors.green.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -224,21 +405,6 @@ class _GymListPageState extends State<GymListPage> {
                                     ),
                                   ],
                                 ),
-                                if (gym.openTime != null && gym.closeTime != null) ...[
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time, size: 14, color: Colors.blue),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          "Operasional: ${(gym.openDays != null && gym.openDays!.isNotEmpty) ? gym.openDays! : 'Setiap Hari'} (${gym.openTime} - ${gym.closeTime})",
-                                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w500),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
                                 if (distance != null) ...[
                                   const SizedBox(height: 8),
                                   Row(
@@ -270,21 +436,6 @@ class _GymListPageState extends State<GymListPage> {
                                                   Text(gym.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                                                   const SizedBox(height: 8),
                                                   Text(gym.location ?? 'Lokasi tidak tersedia', style: const TextStyle(color: Colors.grey)),
-                                                  if (gym.openTime != null && gym.closeTime != null) ...[
-                                                    const SizedBox(height: 8),
-                                                    Row(
-                                                      children: [
-                                                        const Icon(Icons.access_time_filled, size: 16, color: Colors.blue),
-                                                        const SizedBox(width: 6),
-                                                        Expanded(
-                                                          child: Text(
-                                                            'Operasional: ${(gym.openDays != null && gym.openDays!.isNotEmpty) ? gym.openDays! : "Setiap Hari"} (${gym.openTime} s/d ${gym.closeTime})',
-                                                            style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.bold),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
                                                   const SizedBox(height: 16),
                                                   const Text('Deskripsi:', style: TextStyle(fontWeight: FontWeight.bold)),
                                                   const SizedBox(height: 8),
@@ -398,6 +549,39 @@ class _GymListPageState extends State<GymListPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String value, String label) {
+    final isSelected = _sortBy == value;
+    const primaryColor = Color(0xFFFFB800);
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _sortBy = value;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF0F172A) : Colors.grey.shade700,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }

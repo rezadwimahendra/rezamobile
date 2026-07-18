@@ -84,7 +84,6 @@ class _RegisterPageState extends State<RegisterPage> {
           obscureText: obscureText,
           keyboardType: keyboardType,
           onChanged: (_) => setState(() {}),
-          cursorColor: primaryColor,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
@@ -96,7 +95,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: primaryColor, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),

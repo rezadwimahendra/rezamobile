@@ -28,6 +28,7 @@ class ProfessionalRegistered extends ProfessionalEvent {
   final String? location;
   final File? avatarFile;
   final List<File>? galleryFiles;
+  final List<String>? existingGallery;
   final double? latitude;
   final double? longitude;
   final String? openTime;
@@ -45,6 +46,7 @@ class ProfessionalRegistered extends ProfessionalEvent {
     this.location,
     this.avatarFile,
     this.galleryFiles,
+    this.existingGallery,
     this.latitude,
     this.longitude,
     this.openTime,
@@ -53,7 +55,7 @@ class ProfessionalRegistered extends ProfessionalEvent {
   });
 
   @override
-  List<Object?> get props => [userId, role, name, description, price, nonMemberPrice, specialty, location, avatarFile, galleryFiles, latitude, longitude, openTime, closeTime, openDays];
+  List<Object?> get props => [userId, role, name, description, price, nonMemberPrice, specialty, location, avatarFile, galleryFiles, existingGallery, latitude, longitude, openTime, closeTime, openDays];
 }
 
 class ProfessionalSubscribed extends ProfessionalEvent {

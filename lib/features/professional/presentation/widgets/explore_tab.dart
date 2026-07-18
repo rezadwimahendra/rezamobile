@@ -27,7 +27,11 @@ class _ExploreTabState extends State<ExploreTab> with SingleTickerProviderStateM
     _tabController.addListener(() {
       setState(() {}); // Rebuild to update hintText of search field
     });
-    _fetchInitialData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fetchInitialData();
+      }
+    });
   }
 
   @override

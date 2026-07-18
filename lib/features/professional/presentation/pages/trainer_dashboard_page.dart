@@ -1,211 +1,206 @@
 import 'package:flutter/material.dart';
-import './manage_portfolio_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../../../../injection.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../bloc/professional_bloc.dart';
+import '../bloc/professional_event.dart';
+import '../bloc/professional_state.dart';
+import './consultation_history_page.dart';
 import './setup_professional_page.dart';
+import '../widgets/trainer_tabs/trainer_clients_tab.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/presentation/pages/complete_profile_page.dart';
+import '../../../profile/presentation/pages/security_settings_page.dart';
+import '../../../profile/presentation/pages/help_center_page.dart';
 
-class TrainerDashboardPage extends StatelessWidget {
+class TrainerDashboardPage extends StatefulWidget {
   final String userName;
   const TrainerDashboardPage({super.key, required this.userName});
 
   @override
+  State<TrainerDashboardPage> createState() => _TrainerDashboardPageState();
+}
+
+class _TrainerDashboardPageState extends State<TrainerDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    final userId = sl<AuthBloc>().state.user?.id;
+    if (userId != null) {
+      context.read<ProfessionalBloc>().add(
+        ProfessionalDataRequested(userId: userId, role: 'trainer'),
+      );
+    }
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, top: 24, bottom: 12),
+      child: Text(
+        title, 
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.blueGrey, letterSpacing: 1.2)
+      ),
+    );
+  }
+
+  Widget _buildMenuCard({required List<Widget> items}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.015), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(children: items),
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context,
+    IconData icon, 
+    String title, 
+    String subtitle,
+    Color accentColor,
+    {VoidCallback? onTap}
+  ) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: accentColor.withOpacity(0.1), 
+          borderRadius: BorderRadius.circular(12)
+        ),
+        child: Icon(icon, color: accentColor, size: 20),
+      ),
+      title: Text(
+        title, 
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
-    const scaffoldBg = Color(0xFFF8F9FA);
+    const scaffoldBg = Color(0xFFF8FAFC);
+    final baseUrl = sl<PocketBase>().baseUrl;
     
-    return Scaffold(
-      backgroundColor: scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'FitMotion Pro',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black54),
-            onPressed: () {},
+    return BlocBuilder<ProfessionalBloc, ProfessionalState>(
+      builder: (context, state) {
+        final prof = state.professional;
+        String? imageUrl;
+        if (prof != null && prof.avatar != null && prof.avatar!.toString().trim().isNotEmpty) {
+          imageUrl = "$baseUrl/api/files/trainers/${prof.id}/${prof.avatar}";
+        }
+        if (imageUrl != null && imageUrl.endsWith('/')) {
+          imageUrl = null;
+        }
+
+        final displayUserName = prof?.name ?? widget.userName;
+
+        return Scaffold(
+          backgroundColor: scaffoldBg,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0.5,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'FitMotion Pro',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            centerTitle: true,
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              Row(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: primaryColor.withOpacity(0.1),
-                    child: Icon(Icons.person, color: primaryColor),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                  // Flat Header (matching profile_page.dart layout)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Selamat Datang,', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: primaryColor, width: 2),
+                            image: imageUrl != null 
+                                ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                                : null,
+                          ),
+                          child: imageUrl == null 
+                              ? Icon(Icons.person, color: primaryColor, size: 48)
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
                         Text(
-                          userName, 
-                          style: const TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold),
+                          displayUserName, 
+                          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'FitMotion Pro Trainer', 
+                          style: TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 32),
 
-              Row(
-                children: [
-                  _buildStatCard('Total Klien', '0', Icons.groups_outlined, primaryColor),
-                  const SizedBox(width: 16),
-                  _buildStatCard('Rating Pelatih', '5.0', Icons.star_outline, primaryColor),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              const Text('QUICK ACTIONS', style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              const SizedBox(height: 16),
-              
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.1, 
-                children: [
-                  _buildActionCard(
-                    Icons.badge_outlined, 
-                    'Profil Publik', 
-                    'Atur Bio, Nama & Harga',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SetupProfessionalPage(roleType: 'trainer'))),
-                  ),
-                  _buildActionCard(Icons.people_alt_outlined, 'Daftar Klien', 'Pantau Progres Member'),
-                  _buildActionCard(Icons.chat_bubble_outline, 'Chat Konsultasi', 'Pesan Baru Klien'),
-                  _buildActionCard(Icons.access_time, 'Jam Operasional', 'Atur Ketersediaan Anda'),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              const Text('JADWAL HARI INI', style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.event_available_outlined, color: Colors.grey.shade300, size: 40),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Tidak ada sesi latihan hari ini.',
-                      style: TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w500),
+                  // Quick Actions
+                  _buildSectionHeader('LAYANAN & TINDAKAN'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildMenuCard(
+                      items: [
+                        _buildMenuItem(
+                          context,
+                          Icons.badge_outlined, 
+                          'Profil Publik', 
+                          'Atur Bio, Nama & Harga',
+                          Colors.blue,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SetupProfessionalPage(roleType: 'trainer'))),
+                        ),
+                        const Divider(color: Color(0xFFF1F5F9), height: 1, indent: 56),
+                        _buildMenuItem(
+                          context,
+                          Icons.chat_bubble_outline, 
+                          'Chat Konsultasi', 
+                          'Pesan Baru Klien',
+                          Colors.orange,
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConsultationHistoryPage())),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              const SizedBox(height: 120),
-            ],
+                  const SizedBox(height: 60),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 12),
-            Text(
-              value, 
-              style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label, 
-              style: const TextStyle(color: Colors.black38, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionCard(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.black87, size: 22),
-            const SizedBox(height: 8),
-            Flexible(
-              child: Text(
-                title, 
-                style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Flexible(
-              child: Text(
-                subtitle, 
-                style: const TextStyle(color: Colors.black38, fontSize: 9),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

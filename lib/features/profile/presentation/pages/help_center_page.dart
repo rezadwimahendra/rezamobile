@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HelpCenterPage extends StatelessWidget {
   const HelpCenterPage({super.key});
@@ -53,18 +54,14 @@ class HelpCenterPage extends StatelessWidget {
                     icon: Icons.support_agent,
                     title: 'Customer Service (WhatsApp)',
                     iconColor: Colors.green,
-                    onTap: () {
-                      // TODO: Implement WhatsApp launch
-                    },
+                    onTap: () => _launchURL(context, 'https://wa.me/6282371362312?text=Halo%20FitMotion%20Support'),
                   ),
                   _buildDivider(),
                   _buildListMenu(
                     icon: Icons.mail_outline,
                     title: 'Email Support',
                     iconColor: Colors.blue,
-                    onTap: () {
-                      // TODO: Implement Email launch
-                    },
+                    onTap: () => _launchURL(context, 'mailto:support@fitmotion.com?subject=FitMotion%20Support%20Request'),
                   ),
                 ],
               ),
@@ -142,4 +139,29 @@ class HelpCenterPage extends StatelessWidget {
   }
 
   Widget _buildDivider() => Divider(height: 1, color: Colors.grey.shade50, indent: 60);
+
+  Future<void> _launchURL(BuildContext context, String urlString) async {
+    try {
+      final Uri url = Uri.parse(urlString);
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tidak dapat membuka link: $urlString'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }

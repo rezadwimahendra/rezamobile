@@ -37,7 +37,7 @@ class ProfessionalBloc extends Bloc<ProfessionalEvent, ProfessionalState> {
       (professional) {
         if (professional == null) {
           // User belum mendaftarkan profil bisnis, emit status initial secara aman
-          emit(state.copyWith(status: ProfessionalStatus.initial, professional: null));
+          emit(state.copyWith(status: ProfessionalStatus.initial, clearProfessional: true));
         } else {
           emit(state.copyWith(status: ProfessionalStatus.success, professional: professional));
         }

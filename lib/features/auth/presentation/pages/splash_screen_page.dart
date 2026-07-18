@@ -135,16 +135,6 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'TRACK • TRAIN • TRANSFORM',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: const Color(0xFF0F172A).withOpacity(0.7),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
                   ],
                 ),
                ),

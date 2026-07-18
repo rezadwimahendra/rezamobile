@@ -89,11 +89,9 @@ class SubscriptionPage extends StatelessWidget {
   Future<void> _startPaymentFlow(BuildContext context) async {
     final user = context.read<AuthBloc>().state.user;
     if (user == null) return;
-    final double amount = roleType == 'trainer' 
+    final double amount = (roleType == 'trainer' || roleType == 'gym')
         ? 149000 
-        : roleType == 'gym' 
-            ? 599000 
-            : 29000;
+        : 29000;
     
     showDialog(
       context: context,
@@ -136,11 +134,9 @@ class SubscriptionPage extends StatelessWidget {
     final isGym = roleType == 'gym';
     final isPro = roleType == 'pro';
     const primaryColor = Color(0xFFFFB800);
-    final String priceText = isTrainer 
+    final String priceText = (isTrainer || isGym)
         ? '149.000' 
-        : isGym 
-            ? '599.000' 
-            : '29.000';
+        : '29.000';
     final String coverImage = isTrainer 
         ? 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=800&auto=format&fit=crop'
         : isGym 
@@ -149,7 +145,10 @@ class SubscriptionPage extends StatelessWidget {
         
     return BlocListener<ProfessionalBloc, ProfessionalState>(
       listener: (context, state) {
-        if (state.status == ProfessionalStatus.success) _showSuccessDialog(context);
+        if (state.status == ProfessionalStatus.success) {
+          context.read<AuthBloc>().add(AuthCheckRequested());
+          _showSuccessDialog(context);
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -267,6 +266,7 @@ class SubscriptionPage extends StatelessWidget {
                                   _buildTick(isTrainer ? 'Akses Dashboard Trainer' : 'Akses Dashboard Bisnis Gym'),
                                   _buildTick(isTrainer ? 'Priority Trainer Search' : 'Priority Gym Search'),
                                   _buildTick(isTrainer ? 'Kelola Klien Tanpa Batas' : 'Kelola Member & Fasilitas'),
+                                  _buildTick('Termasuk Fitur Premium (Progres & Nutrisi)'),
                                 ]
                               ],
                             ),

@@ -243,7 +243,7 @@ class ProgressTab extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 const Text(
-                                  'Berlangganan FitMotion Pro untuk melihat analisis nutrisi makro (karbohidrat, protein, lemak) serta grafik tren berat badan lengkap Anda.',
+                                  'Berlangganan FitMotion Pro, Pro Trainer, atau Business Gym Partner untuk melihat analisis nutrisi makro (karbohidrat, protein, lemak) serta grafik tren berat badan lengkap Anda.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
                                 ),
