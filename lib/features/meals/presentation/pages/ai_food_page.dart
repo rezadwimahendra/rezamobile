@@ -251,30 +251,32 @@ class _AiFoodPageState extends State<AiFoodPage> {
       },
       child: Container(
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-          // Header Tab
-          const Column(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'AI Food Describer',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Foto makanan Anda, biar AI yang menebak dan mencatat nutrisinya!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Area Gambar / Placeholder
-          Expanded(
-            child: Container(
+            // Header Tab
+            const Column(
+              children: [
+                Text(
+                  'AI Food Describer',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Foto makanan Anda, biar AI yang menebak dan mencatat nutrisinya!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+  
+            // Area Gambar / Placeholder
+            Container(
+              height: 280,
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(24),
@@ -335,7 +337,6 @@ class _AiFoodPageState extends State<AiFoodPage> {
                       ),
                     ),
             ),
-          ),
           const SizedBox(height: 24),
 
           // Jika ada hasil deteksi AI

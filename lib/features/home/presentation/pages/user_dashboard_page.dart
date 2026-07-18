@@ -315,19 +315,24 @@ class _UserDashboardPageState extends State<UserDashboardPage> {
           ),
           body: pages[_currentIndex],
           bottomNavigationBar: BottomAppBar(
-            height: 70,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
             color: Colors.white,
             elevation: 8,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildTabItem(Icons.grid_view_sharp, 'Dasbor', 0),
-                _buildTabItem(Icons.menu_book, 'Harian', 1),
-                _buildTabItem(Icons.auto_awesome, 'Foto AI', 2),
-                _buildTabItem(Icons.bar_chart, 'Progres', 3),
-                _buildTabItem(Icons.explore_outlined, 'Jelajah', 4),
-              ],
+            padding: EdgeInsets.zero,
+            child: SafeArea(
+              child: Container(
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildTabItem(Icons.grid_view_sharp, 'Dasbor', 0),
+                    _buildTabItem(Icons.menu_book, 'Harian', 1),
+                    _buildTabItem(Icons.auto_awesome, 'Foto AI', 2),
+                    _buildTabItem(Icons.bar_chart, 'Progres', 3),
+                    _buildTabItem(Icons.explore_outlined, 'Jelajah', 4),
+                  ],
+                ),
+              ),
             ),
           ),
         );

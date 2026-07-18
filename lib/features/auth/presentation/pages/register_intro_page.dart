@@ -26,12 +26,13 @@ class RegisterIntroPage extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 2),
+              const SizedBox(height: 48),
               
               const Text(
                 'Selamat datang! Mari kita\nsesuaikan MyFitnessPal dengan\nsasaranmu.',
@@ -45,7 +46,7 @@ class RegisterIntroPage extends StatelessWidget {
                 ),
               ),
               
-              const Spacer(flex: 2),
+              const SizedBox(height: 60),
               
               // Tombol Lanjutkan (Kuning)
               ElevatedButton(
@@ -65,7 +66,7 @@ class RegisterIntroPage extends StatelessWidget {
                 ),
                 child: const Text('Lanjutkan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              const Spacer(flex: 3),
+              const SizedBox(height: 60),
               
               // Teks Kebijakan Privasi
               RichText(
